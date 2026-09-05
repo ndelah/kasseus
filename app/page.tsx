@@ -494,8 +494,10 @@ export default function Home() {
             {modal === 'models' ? (
               <>
                 <p>
-                  {supportedModels.map((m) => `${m.name} ${m.generation}`).join('; ')}
-                  {' '}are available. Other models are listed for reference. Kids,
+                  {supportedModels
+                    .map((m) => `${m.name} ${m.generation}`)
+                    .join('; ')}{' '}
+                  are available. Other models are listed for reference. Kids,
                   storage and connectivity bundles use their corresponding
                   device body; Fire tablets are excluded.
                 </p>
@@ -539,8 +541,10 @@ export default function Home() {
                 <p>
                   Export at 100% scale in millimetres. The case has a{' '}
                   {CASE.base} mm back, {CASE.wall} mm walls, {CASE.clearance} mm
-                  clearance per side and a small retaining lip. Artwork adds up
-                  to {CASE.relief} mm of relief.
+                  clearance per side and a small retaining lip. Pockets are 0.8
+                  mm deep. Inserts are 0.6 mm thick, with 0.2 mm side clearance
+                  and 0.05 mm for adhesive. Their faces sit 0.15 mm below the
+                  case surface.
                 </p>
                 <p>
                   Use flexible TPU for fitting around the lip. Rigid materials
@@ -569,8 +573,8 @@ export default function Home() {
               <>
                 <h3>01 · Choose your Kindle</h3>
                 <p>
-                  Choose your model from the selector. Find your device details in
-                  Settings → Device Options → Device Info.
+                  Choose your model from the selector. Find your device details
+                  in Settings → Device Options → Device Info.
                 </p>
                 <h3>02 · Add something personal</h3>
                 <p>
