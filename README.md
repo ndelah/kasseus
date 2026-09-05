@@ -2,6 +2,20 @@
 
 A browser-only Kindle back-case designer built with React, Vinext and Three.js. Start with `npm install` and `npm run dev`; build with `npm run build`. Use Node 22.13 or newer.
 
+## Cloudflare deployment from GitHub
+
+Connect this repository in Cloudflare → Workers & Pages → Create application → Import a repository. Use:
+
+- Worker name: `kasseus`
+- Production branch: `main`
+- Root directory: `/`
+- Build command: `npm run build`
+- Deploy command: `npm run deploy`
+- Preview deploy command: `npx wrangler versions upload`
+- Build environment: `NODE_VERSION=22.16.0`
+
+The Cloudflare Vite plugin writes the deploy configuration during the build; Wrangler automatically picks it up. No runtime secrets or database bindings are needed. Uploads stay in the browser. The Worker URL serves the public app; the source repository can remain private.
+
 ## V1
 
 Only the Kindle Paperwhite 11th generation (2021) can be selected. The model catalog covers Kindle e-reader body revisions from 2007–2026; storage, connectivity and Kids bundles share their underlying body. Other models remain disabled. Catalog measurements are reference dimensions, not manufacturing drawings.

@@ -38,3 +38,7 @@ next-env.d.ts
 /work/
 
 *.tsbuildinfo
+
+# local Worker secrets
+.dev.vars*
+!.dev.vars.example
