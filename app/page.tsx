@@ -77,6 +77,8 @@ export default function Home() {
         if (n === request.current) setBusy(false);
       });
     return () => {
+      // Invalidate pending uploads on unmount; this ref is a request counter, not a DOM node.
+      // oxlint-disable-next-line react-hooks/exhaustive-deps
       request.current++;
       if (urls.current) URL.revokeObjectURL(urls.current);
     };

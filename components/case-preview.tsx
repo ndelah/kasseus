@@ -158,6 +158,8 @@ export default function CasePreview({
     <div
       ref={host}
       className="preview-scene"
+      // The WebGL surface handles arrow keys through its native listener.
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
       role="application"
       aria-label="Interactive 3D Kindle back case. Drag or use arrow keys to rotate. Scroll to zoom."
