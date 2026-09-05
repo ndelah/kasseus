@@ -13,7 +13,7 @@
     "format": "oxfmt",
     "deploy": "wrangler deploy",
     "check": "tsc --noEmit",
-    "test": "tsx tests/geometry.test.ts"
+    "test": "node --import tsx tests/geometry.test.ts && node --import tsx tests/inlay.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
@@ -21,10 +21,13 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",
+    "d3-contour": "^4.0.2",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.2",
+    "fflate": "^0.8.3",
     "input-otp": "1.4.2",
     "lucide-react": "1.31.0",
+    "manifold-3d": "^3.5.1",
     "react": "19.2.6",
     "react-day-picker": "9.8.1",
     "react-dom": "19.2.6",
@@ -41,6 +44,7 @@
     "@cloudflare/vite-plugin": "1.37.1",
     "@cloudflare/workers-types": "4.20260515.1",
     "@tailwindcss/postcss": "4.2.1",
+    "@types/d3-contour": "^3.0.6",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",

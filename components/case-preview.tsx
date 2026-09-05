@@ -2,19 +2,25 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createCaseGeometry, type Artwork } from '@/lib/case-geometry';
+import { meshGeometry, type InlayDesign } from '@/lib/inlay-geometry';
+import { hexColor } from '@/lib/color-separation';
+import { type SupportedModel } from '@/lib/models';
 export default function CasePreview({
-  art,
+  design,
+  baseColor,
   view,
   reset,
 }: {
-  art?: Artwork;
+  model: SupportedModel;
+  design?: InlayDesign;
+  baseColor: number;
   view: string;
   reset: number;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
     mesh: THREE.Mesh;
+    inserts: THREE.Mesh;
     camera: THREE.PerspectiveCamera;
     controls: OrbitControls;
     renderer: THREE.WebGLRenderer;
@@ -54,8 +60,10 @@ export default function CasePreview({
       roughness: 0.72,
       metalness: 0.03,
     });
-    const mesh = new THREE.Mesh(createCaseGeometry(), [mat, mat.clone()]);
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), mat);
     scene.add(mesh);
+    const inserts = new THREE.Mesh(new THREE.BufferGeometry(), mat.clone());
+    scene.add(inserts);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.enablePan = false;
@@ -63,7 +71,7 @@ export default function CasePreview({
     controls.maxDistance = 650;
     controls.target.set(0, 0, 3);
     controls.update();
-    sceneRef.current = { mesh, camera, controls, renderer };
+    sceneRef.current = { mesh, inserts, camera, controls, renderer };
     const observer = new ResizeObserver(() => {
       const w = el.clientWidth,
         h = el.clientHeight;
@@ -109,11 +117,10 @@ export default function CasePreview({
       cancelAnimationFrame(frame);
       observer.disconnect();
       controls.dispose();
+      inserts.geometry.dispose();
+      (inserts.material as THREE.Material).dispose();
       mesh.geometry.dispose();
-      (mesh.material as THREE.MeshStandardMaterial[]).forEach((m) => {
-        m.map?.dispose();
-        m.dispose();
-      });
+      (mesh.material as THREE.Material).dispose();
       renderer.dispose();
       renderer.domElement.remove();
       sceneRef.current = null;
@@ -123,30 +130,26 @@ export default function CasePreview({
   useEffect(() => {
     const s = sceneRef.current;
     if (!s) return;
+    s.mesh.visible = Boolean(design);
+    s.inserts.visible = Boolean(design?.inserts) && view !== 'relief';
     s.mesh.geometry.dispose();
-    s.mesh.geometry = createCaseGeometry(art);
-    const m = (s.mesh.material as THREE.MeshStandardMaterial[])[0];
-    m.map?.dispose();
-    m.map = null;
-    m.color.setHex(0xe1c4a5);
-    // Preview color follows exactly the same cropped pixels as the height field. STL uses relief only.
-    if (art && view === 'artwork') {
-      const tex = new THREE.DataTexture(
-        new Uint8Array(art.data),
-        art.width,
-        art.height,
-        THREE.RGBAFormat,
+    s.inserts.geometry.dispose();
+    s.mesh.geometry = design
+      ? meshGeometry(design.body)
+      : new THREE.BufferGeometry();
+    s.inserts.geometry = design?.inserts
+      ? meshGeometry(design.inserts)
+      : new THREE.BufferGeometry();
+    if (design) {
+      (s.mesh.material as THREE.MeshStandardMaterial).color.set(
+        hexColor(design.colors[baseColor]),
       );
-      tex.flipY = true;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.magFilter = THREE.LinearFilter;
-      tex.minFilter = THREE.LinearFilter;
-      tex.needsUpdate = true;
-      m.map = tex;
-      m.color.setHex(0xffffff);
+      (s.inserts.material as THREE.MeshStandardMaterial).color.set(
+        hexColor(design.colors[1 - baseColor]),
+      );
     }
-    m.needsUpdate = true;
-  }, [art, view]);
+    s.inserts.position.z = view === 'exploded' ? -18 : 0;
+  }, [design, baseColor, view]);
   useEffect(() => {
     const s = sceneRef.current;
     if (!s) return;

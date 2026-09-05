@@ -1,0 +1,53 @@
+[
+  {
+    "id": "paperwhite-2021",
+    "name": "Kindle Paperwhite",
+    "generation": "11th generation · 2021",
+    "height": 174.2,
+    "width": 124.6,
+    "depth": 8.1,
+    "display": 6.8,
+    "port": "USB-C",
+    "shortName": "Paperwhite · 11th gen",
+    "exportName": "paperwhite-11",
+    "source": "https://www.amazon.com.au/Kindle-Paperwhite-16-GB-adjustable/dp/B09TMK7QFX",
+    "template": "rounded-back-open-bottom",
+    "cornerRadius": 7,
+    "fitStatus": "prototype",
+    "notes": "Published outer dimensions. The 7 mm inner corner radius and retention are inherited prototype assumptions, not measured device curvature. Lower edge remains open for charging and power-button access."
+  },
+  {
+    "id": "paperwhite-2018",
+    "name": "Kindle Paperwhite",
+    "generation": "10th generation · 2018",
+    "height": 166.57,
+    "width": 115.84,
+    "depth": 8.18,
+    "display": 6,
+    "port": "Micro-USB",
+    "shortName": "Paperwhite · 10th gen",
+    "exportName": "paperwhite-10",
+    "source": "https://images-na.ssl-images-amazon.com/images/I/81-sqj3b5bS.pdf",
+    "template": "rounded-back-open-bottom",
+    "cornerRadius": 7,
+    "fitStatus": "prototype",
+    "notes": "Amazon User Guide, 2nd Edition, Product Specifications (printed page 50): 166.57 × 115.84 × 8.18 mm; use these rather than the rounded 167 × 116 × 8.2 mm catalog entry. Controls section (printed page 5) places the power button on the bottom edge. The 7 mm inner corner radius and retention are inherited prototype assumptions, not measured device curvature."
+  },
+  {
+    "id": "paperwhite-2013",
+    "name": "Kindle Paperwhite",
+    "generation": "6th generation · 2013",
+    "height": 169,
+    "width": 117,
+    "depth": 9.16,
+    "display": 6,
+    "port": "Micro-USB",
+    "shortName": "Paperwhite · 6th gen",
+    "exportName": "paperwhite-6",
+    "source": "https://kindle.s3.amazonaws.com/UserGuide/Paperwhite_V2/Kindle_Paperwhite_V2_UserGuide_AU.pdf",
+    "template": "rounded-back-open-bottom",
+    "cornerRadius": 7,
+    "fitStatus": "prototype",
+    "notes": "Amazon User Guide, 3rd Edition, pages 43–44: 169 × 117 × 9.16 mm. The 7 mm inner corner radius and retention are inherited prototype assumptions, not measured device curvature. Lower edge remains open for charging and power-button access."
+  }
+]

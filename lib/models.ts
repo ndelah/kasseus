@@ -1,6 +1,13 @@
+import profileData from './case-profiles.json';
+import { parseCaseProfile, type CaseProfile } from './case-profile';
+
 export const catalogSource = 'https://comparisontabl.es/kindle-e-readers/';
-export const supportedSource =
-  'https://www.amazon.com.au/Kindle-Paperwhite-16-GB-adjustable/dp/B09TMK7QFX';
+export const supportedModels = profileData.map((input) => ({
+  ...parseCaseProfile(input), enabled: true as const,
+}));
+export type SupportedModel = CaseProfile & { enabled: true };
+export const supportedModel = supportedModels[0];
+
 export const models = [
   [
     'paperwhite-2021',
@@ -9,7 +16,6 @@ export const models = [
     174.2,
     124.6,
     8.1,
-    true,
   ],
   ['kindle-2024', 'Kindle', '11th generation · 2024', 157.8, 108.6, 8],
   [
@@ -101,7 +107,7 @@ export const models = [
     '6th generation · 2013',
     169,
     117,
-    9.1,
+    9.16,
   ],
   [
     'paperwhite-2012',
@@ -126,13 +132,15 @@ export const models = [
     134.6,
     17.8,
   ],
-].map(([id, name, generation, height, width, depth, enabled]) => ({
-  id: String(id),
-  name: String(name),
-  generation: String(generation),
-  height: Number(height),
-  width: Number(width),
-  depth: Number(depth),
-  enabled: Boolean(enabled),
-}));
-export const supportedModel = models[0];
+].map(([id, name, generation, height, width, depth]) => {
+  const profile = supportedModels.find((model) => model.id === id);
+  return profile ?? {
+    id: String(id),
+    name: String(name),
+    generation: String(generation),
+    height: Number(height),
+    width: Number(width),
+    depth: Number(depth),
+    enabled: false,
+  };
+});

@@ -761,3 +761,84 @@ footer {
     transition: none !important;
   }
 }
+
+.inlay-review {
+  margin-top: 20px;
+  border-top: 1px solid #ded6cc;
+  padding-top: 16px;
+}
+.inlay-review fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.inlay-review legend {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.palette {
+  display: flex;
+  gap: 8px;
+}
+.palette label {
+  display: flex;
+  flex: 1;
+  gap: 7px;
+  align-items: center;
+  padding: 9px 7px;
+  border: 1px solid #d9cec1;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.palette label:has(input:checked) {
+  border-color: #8b694f;
+  background: #f3e9dc;
+}
+.palette input {
+  accent-color: #8b694f;
+  width: 13px;
+}
+.color-chip {
+  width: 22px;
+  height: 28px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  border: 1px solid #0002;
+}
+.palette small {
+  display: block;
+  font-size: 10px;
+  margin-top: 3px;
+}
+.pattern-review {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 16px;
+}
+.pattern-review svg {
+  width: 80px;
+  height: 112px;
+  flex-shrink: 0;
+}
+.pattern-review strong {
+  font-size: 13px;
+}
+.pattern-review p {
+  font-size: 12px;
+  margin: 5px 0;
+}
+.pattern-review small {
+  font-size: 11px;
+  color: #71655c;
+}
+.inlay-warning {
+  font-size: 11px;
+  line-height: 1.5;
+  background: #fff0df;
+  border-radius: 8px;
+  padding: 9px;
+  margin-top: 10px;
+}

@@ -1,12 +1,15 @@
 import * as THREE from 'three';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+import { supportedModel } from './models';
+import { parseCaseProfile, type CaseProfile } from './case-profile';
 export const CASE = {
-  width: 124.6,
-  height: 174.2,
-  depth: 8.1,
+  // Default-model dimensions retained for consumers of the original API.
+  width: supportedModel.width,
+  height: supportedModel.height,
+  depth: supportedModel.depth,
   clearance: 0.35,
   wall: 1.6,
-  base: 1.8,
+  base: 2.4,
   radius: 7,
   relief: 0.65,
 };
@@ -17,14 +20,19 @@ export type Artwork = {
 };
 // A single closed surface: relief back, outer walls, retaining lip, inner walls, inner floor.
 // Every layer shares its boundary indices. Coordinates and exported STL are millimetres.
-export function createCaseGeometry(art?: Artwork) {
+export function createCaseGeometry(
+  art?: Artwork,
+  model: CaseProfile = supportedModel,
+) {
+  parseCaseProfile(model);
+  const radius = model.cornerRadius;
   const nx = 100,
     ny = 140,
     positions: number[] = [],
     uvs: number[] = [],
     indices: number[] = [];
-  const iw = CASE.width + CASE.clearance * 2,
-    ih = CASE.height + CASE.clearance * 2;
+  const iw = model.width + CASE.clearance * 2,
+    ih = model.height + CASE.clearance * 2;
   const ow = iw + CASE.wall * 2,
     oh = ih + CASE.wall * 2;
   function point(
@@ -84,9 +92,9 @@ export function createCaseGeometry(art?: Artwork) {
     for (let j = ny; j > 0; j--) edge.push(start + j * (nx + 1));
     return edge;
   }
-  const back = surface(ow, oh, CASE.radius + CASE.wall, true);
+  const back = surface(ow, oh, radius + CASE.wall, true);
   const backCount = indices.length;
-  const floor = surface(iw, ih, CASE.radius, false);
+  const floor = surface(iw, ih, radius, false);
   function boundary(
     w: number,
     h: number,
@@ -104,20 +112,20 @@ export function createCaseGeometry(art?: Artwork) {
     for (let j = ny; j > 0; j--) add(0, j / ny);
     return e;
   }
-  // Open lower edge provides USB-C and power-button access without assumed port offsets.
+  // Open lower edge provides charging and power-button access without assumed port offsets.
   const wallHeight = (x: number, y: number) =>
     y < -ih / 2 + 5 && Math.abs(x) < iw / 2 - 10
       ? CASE.base + 0.4
-      : CASE.base + CASE.depth + 0.65;
+      : CASE.base + model.depth + 0.65;
   function connect(a: number[], b: number[]) {
     for (let i = 0; i < a.length; i++) {
       const j = (i + 1) % a.length;
       indices.push(a[i], a[j], b[i], a[j], b[j], b[i]);
     }
   }
-  const outerTop = boundary(ow, oh, CASE.radius + CASE.wall, wallHeight);
-  const innerLip = boundary(iw - 1, ih - 1, CASE.radius - 0.5, wallHeight);
-  const innerUnder = boundary(iw, ih, CASE.radius, (x, y) =>
+  const outerTop = boundary(ow, oh, radius + CASE.wall, wallHeight);
+  const innerLip = boundary(iw - 1, ih - 1, radius - 0.5, wallHeight);
+  const innerUnder = boundary(iw, ih, radius, (x, y) =>
     Math.max(CASE.base + 0.15, wallHeight(x, y) - 0.8),
   );
   connect(back, outerTop);
@@ -142,22 +150,39 @@ export function exportCaseSTL(geometry: THREE.BufferGeometry) {
   const result = new STLExporter().parse(mesh, { binary: true });
   return result;
 }
-export async function readArtwork(url: string): Promise<Artwork> {
+export function artworkSize(model: CaseProfile = supportedModel) {
+  // Match the panel used by both the relief height field and preview UVs.
+  const border = 2 * (CASE.clearance + CASE.wall) - 12;
+  return {
+    width: 400,
+    height: Math.round(
+      (400 * (model.height + border)) / (model.width + border),
+    ),
+  };
+}
+export async function readArtwork(
+  url: string,
+  model: CaseProfile = supportedModel,
+): Promise<Artwork> {
   const image = new Image();
   image.src = url;
   await image.decode();
   if (image.width * image.height > 40000000)
     throw new Error('Please use an image smaller than 40 megapixels.');
   const canvas = document.createElement('canvas');
-  canvas.width = 400;
-  canvas.height = 560;
+  const { width, height } = artworkSize(model);
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Your browser could not process this image.');
   ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, 400, 560);
-  const scale = Math.max(400 / image.width, 560 / image.height),
+  ctx.fillRect(0, 0, width, height);
+  const scale = Math.max(width / image.width, height / image.height),
     w = image.width * scale,
     h = image.height * scale;
-  ctx.drawImage(image, (400 - w) / 2, (560 - h) / 2, w, h);
-  return ctx.getImageData(0, 0, 400, 560);
+  ctx.drawImage(image, (width - w) / 2, (height - h) / 2, w, h);
+  return ctx.getImageData(0, 0, width, height);
+}
+export function caseFilename(model: CaseProfile, art?: Artwork) {
+  return `kasseus-${model.exportName}-${art ? 'relief' : 'plain'}-mm.stl`;
 }
