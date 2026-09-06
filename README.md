@@ -20,7 +20,7 @@ The Cloudflare Vite plugin writes the deploy configuration during the build; Wra
 
 The Kindle Paperwhite 11th generation (2021), 10th generation (2018, Paperwhite 4), and 6th generation (2013, Paperwhite 2) can be selected. Selection updates the dimensions, 3D preview, artwork crop, printing notes and STL filename. The model catalog covers Kindle e-reader body revisions from 2007–2026; storage, connectivity and Kids bundles share their underlying body. Other models remain disabled. Catalog measurements are reference dimensions, not manufacturing drawings.
 
-Upload PNG, JPEG or WebP (10 MB maximum). Images are center-cropped locally and never uploaded to a server. Images are simplified locally to two colors in a Web Worker using color clustering and contour tracing. Choose the case color; inspect assembled, pockets and separate views. Orange highlights discarded fine detail. Download a ZIP containing case.stl, inserts.stl and assembly notes; print each STL in its own filament color. Removing the image generates a plain case.
+Upload PNG, JPEG or WebP (10 MB maximum). Images are center-cropped locally and never uploaded to a server. Images are quantized locally to as many distinct flat colors as the artwork uses, in a Web Worker using color clustering and contour tracing. Choose the case color; inspect assembled, pockets and separate views. Orange highlights discarded fine detail. Download a ZIP containing case.stl, insert STLs and assembly notes; print each STL in its own filament color. Removing the image generates a plain case.
 
 The case mesh is a closed shell in millimetres with 0.35 mm clearance per side, 2.4 mm backing, 1.6 mm walls and a 0.5 mm retaining lip. The lower edge is open for charging and the power button. TPU is intended. This is an untested physical prototype: corner radius, retention, fit and printer tolerance need physical validation. Do not claim production-verified fit.
 
@@ -45,11 +45,11 @@ The starter's full `npm run lint` also scans untouched component-library code wi
 
 `public/ginkgo.png` was generated once with the built-in image-generation tool. Prompt: “Portrait 3:4 botanical linocut of a single elegant ginkgo branch with fan-shaped leaves in muted terracotta ink on pale warm cream paper. Refined editorial Japanese print aesthetic, hand-carved linocut with subtle ink texture and clear leaf silhouettes. One graceful branch, large graceful negative space, balanced airy portrait composition, full flat artwork with no perspective. No text, signature, watermark, device, case, UI, frame or mockup.”
 
-## Two-color inlays
+## Color inlays
 
-Manifold WASM cuts 0.8 mm pockets, leaving 1.6 mm of backing. Matching 0.6 mm inserts have 0.2 mm side clearance and a 0.05 mm adhesive allowance; their face sits 0.15 mm below the exterior. These are glue-in parts, not validated snap fits. Cleanup removes features below approximately 1.2 mm width / 4 mm² area; max 80 loose pieces. Grain, gradients and photos are approximated, so inspect the preview. Colors are filament references only.
+Manifold WASM cuts 0.8 mm pockets, leaving 1.6 mm of backing. Matching 0.6 mm inserts have 0.2 mm side clearance and a 0.05 mm adhesive allowance; their face sits 0.15 mm below the exterior. These are glue-in parts, not validated snap fits. Cleanup removes features below approximately 0.8 mm width / 1 mm² area. There is no cap on distinct colors or loose pieces; dense patterns export one insert STL per filament. Grain, gradients and photos are approximated, so inspect the preview. Colors are filament references only.
 
-`npm test` validates all shell models and inlay topology, holes, clearance, color reversal, tiny features, solid-color fallback and STL serialization. Physical fit still requires a test print.
+`npm test` validates all shell models and inlay topology, holes, clearance, color reversal, tiny features, solid-color fallback, multi-color palettes, dense piece counts and STL serialization. Physical fit still requires a test print.
 
 ## Automated case generator
 

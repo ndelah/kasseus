@@ -26,8 +26,8 @@ export function useInlay(
       worker = new InlayWorker();
       timeout = setTimeout(() => {
         worker.terminate();
-        fail('This pattern took too long to process. Try a simpler image.');
-      }, 60000);
+        fail('This pattern took too long to process. Please try again.');
+      }, 180000);
       worker.onmessage = (
         event: MessageEvent<{ design?: InlayDesign; error?: string }>,
       ) => {

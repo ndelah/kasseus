@@ -20,7 +20,7 @@ export default function CasePreview({
   const host = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
     mesh: THREE.Mesh;
-    inserts: THREE.Mesh;
+    inserts: THREE.Group;
     camera: THREE.PerspectiveCamera;
     controls: OrbitControls;
     renderer: THREE.WebGLRenderer;
@@ -65,7 +65,7 @@ export default function CasePreview({
     });
     const mesh = new THREE.Mesh(new THREE.BufferGeometry(), mat);
     scene.add(mesh);
-    const inserts = new THREE.Mesh(new THREE.BufferGeometry(), mat.clone());
+    const inserts = new THREE.Group();
     scene.add(inserts);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -120,8 +120,11 @@ export default function CasePreview({
       cancelAnimationFrame(frame);
       observer.disconnect();
       controls.dispose();
-      inserts.geometry.dispose();
-      (inserts.material as THREE.Material).dispose();
+      inserts.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        child.geometry.dispose();
+        (child.material as THREE.Material).dispose();
+      });
       mesh.geometry.dispose();
       (mesh.material as THREE.Material).dispose();
       renderer.dispose();
@@ -134,23 +137,34 @@ export default function CasePreview({
     const s = sceneRef.current;
     if (!s) return;
     s.mesh.visible = Boolean(design);
-    s.inserts.visible = Boolean(design?.inserts) && view !== 'relief';
     s.mesh.geometry.dispose();
-    s.inserts.geometry.dispose();
     s.mesh.geometry = design
       ? meshGeometry(design.body)
       : new THREE.BufferGeometry();
-    s.inserts.geometry = design?.inserts
-      ? meshGeometry(design.inserts)
-      : new THREE.BufferGeometry();
+    s.inserts.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      child.geometry.dispose();
+      (child.material as THREE.Material).dispose();
+    });
+    s.inserts.clear();
+    const layers = design?.layers ?? [];
+    for (const layer of layers) {
+      const insert = new THREE.Mesh(
+        meshGeometry(layer.mesh),
+        new THREE.MeshStandardMaterial({
+          color: hexColor(design!.colors[layer.colorIndex]),
+          roughness: 0.9,
+          metalness: 0,
+        }),
+      );
+      s.inserts.add(insert);
+    }
     if (design) {
       (s.mesh.material as THREE.MeshStandardMaterial).color.set(
         hexColor(design.colors[baseColor]),
       );
-      (s.inserts.material as THREE.MeshStandardMaterial).color.set(
-        hexColor(design.colors[1 - baseColor]),
-      );
     }
+    s.inserts.visible = layers.length > 0 && view !== 'relief';
     s.inserts.position.z = view === 'exploded' ? -18 : 0;
   }, [design, baseColor, view]);
   useEffect(() => {

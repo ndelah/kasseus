@@ -329,8 +329,8 @@ export default function Home() {
                 </div>
               )}
               <p className="art-info">
-                Broad shapes work best. Your image becomes two colors, with
-                recessed pockets and matching glue-in inserts.
+                Your image is separated into flat colors, with recessed pockets
+                and matching glue-in inserts.
               </p>
               {art && design && (
                 <InlayReview
@@ -554,12 +554,12 @@ export default function Home() {
                 </p>
                 <h3>Artwork becomes shape</h3>
                 <p>
-                  STL does not store color. Print the case and inserts using two
-                  chosen filaments, then glue the inserts into their matching
+                  STL does not store color. Print the case and each insert color
+                  using matching filaments, then glue the inserts into their
                   pockets. These are glue-in parts, not locking or tested
                   press-fit pieces. Test adhesive compatibility first. Images
-                  are cropped and simplified to two colors; tiny details are
-                  removed and highlighted in orange.
+                  are cropped and separated into flat colors; details that are
+                  too small to print are removed and highlighted in orange.
                 </p>
                 <h3>Check the fit</h3>
                 <p>
@@ -578,10 +578,10 @@ export default function Home() {
                 </p>
                 <h3>02 · Add something personal</h3>
                 <p>
-                  Upload a simple two-color pattern. It stays on your device and
-                  becomes recessed pockets with matching inserts. Choose your
-                  case color and inspect the simplified pattern. Remove the
-                  artwork for a clean, plain shell.
+                  Upload a pattern. It stays on your device and becomes recessed
+                  pockets with matching inserts. Choose your case color and
+                  inspect the simplified pattern. Remove the artwork for a
+                  clean, plain shell.
                 </p>
                 <h3>03 · Make it yours</h3>
                 <p>

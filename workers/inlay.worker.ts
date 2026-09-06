@@ -25,7 +25,7 @@ self.onmessage = async (
       error:
         error instanceof Error
           ? error.message
-          : 'The pattern could not be generated. Please try a simpler image.',
+          : 'The pattern could not be generated. Please try another image.',
     });
   }
 };

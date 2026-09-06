@@ -144,6 +144,17 @@ for (const model of supportedModels) {
     }
     assert.ok(bottomRim.length > 0);
     assert.ok(Math.max(...bottomRim) <= CASE.base + 0.401, 'open lower edge');
+    if (model.id === 'paperwhite-2018') {
+      const topRim = [];
+      for (let i = 0; i < p.count; i++) {
+        if (Math.abs(p.getX(i)) < 10 && p.getY(i) > expected.height / 2) {
+          topRim.push(p.getZ(i));
+        }
+      }
+      assert.ok(topRim.length > 0);
+      assert.ok(Math.max(...topRim) <= CASE.base + 0.401, 'open upper edge');
+      assert.equal(Math.max(...topRim), Math.max(...bottomRim), 'matching rim heights');
+    }
     assert.equal(
       caseFilename(model, art),
       `kasseus-${expected.exportName}-${name}-mm.stl`,

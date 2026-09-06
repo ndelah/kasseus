@@ -87,7 +87,7 @@ collision.delete();
 body.delete();
 inserts.delete();
 console.log(
-  'Inlay tests passed: separation, holes, loose parts, reversed palette, small details, solid color, backing, clearance, export',
+  'Inlay tests passed: separation, holes, loose parts, reversed palette, small details, solid color, backing, clearance, export, multi-color, dense patterns',
 );
 
 // Exercise the full export bundle and each supported model.
@@ -110,7 +110,47 @@ for (const model of supportedModels) {
   }
   console.log(model.id, 'inlay ZIP validated');
 }
-const cornerSample = art((x,y)=> x%30<16);
-for(let y=0;y<3;y++)for(let x=0;x<3;x++)cornerSample.data.set([255,255,255,255],(y*cornerSample.width+x)*4);
-const cornerColors=separateColors(cornerSample).colors;
-assert.ok(cornerColors.every(c=>c[0]<100),'rare white corners do not replace the two green tones');
+const cornerSample = art((x) => x % 30 < 16);
+for (let y = 0; y < 3; y++)
+  for (let x = 0; x < 3; x++)
+    cornerSample.data.set(
+      [255, 255, 255, 255],
+      (y * cornerSample.width + x) * 4,
+    );
+const cornerColors = separateColors(cornerSample).colors;
+assert.ok(
+  cornerColors.every((c) => c[0] < 100),
+  'rare white corners do not replace the two green tones',
+);
+
+const tri = art(() => false);
+for (let y = 0; y < tri.height; y++)
+  for (let x = 0; x < tri.width; x++) {
+    const i = (y * tri.width + x) * 4;
+    const c = y < 48 ? [200, 30, 30] : y < 96 ? [30, 180, 40] : [30, 40, 200];
+    tri.data.set([...c, 255], i);
+  }
+const triColors = separateColors(tri).colors;
+assert.equal(triColors.length, 3);
+const triDesign = buildInlay(engine, tri);
+assert.equal(triDesign.layers.length, 2);
+assert.equal(triDesign.pieces, 2);
+assert.ok(triDesign.inserts);
+const triFiles = unzipSync(exportInlay(triDesign, supportedModels[0], 0));
+assert.equal(Object.keys(triFiles).filter((n) => n.endsWith('.stl')).length, 3);
+
+const dense = art(
+  (x, y) => x % 10 >= 2 && x % 10 <= 7 && y % 12 >= 2 && y % 12 <= 9,
+);
+const denseDesign = buildInlay(engine, dense);
+assert.ok(denseDesign.pieces > 80);
+assert.ok(denseDesign.inserts);
+assert.equal(denseDesign.layers.length, 1);
+const denseBody = solid(denseDesign.body),
+  denseInserts = solid(denseDesign.inserts!);
+const denseHit = denseBody.intersect(denseInserts);
+assert.ok(denseHit.isEmpty(), 'dense inserts do not collide with case');
+denseHit.delete();
+denseBody.delete();
+denseInserts.delete();
+console.log('dense pattern', denseDesign.pieces, 'inserts');

@@ -14,6 +14,7 @@ export function InlayReview({
 }) {
   const path = (rings: number[][][]) =>
     rings.map((r) => `M${r.map((p) => p.join(',')).join('L')}Z`).join('');
+  const filaments = design.colors.length;
   return (
     <div className="inlay-review">
       <fieldset>
@@ -45,7 +46,7 @@ export function InlayReview({
           // SVG needs an explicit accessible image role.
           // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
           role="img"
-          aria-label="Simplified two-color pattern. Orange marks removed details."
+          aria-label="Simplified pattern. Orange marks removed details."
         >
           <rect
             x={-model.width / 2}
@@ -56,10 +57,13 @@ export function InlayReview({
             fill={hexColor(design.colors[baseColor])}
           />
           <g transform="scale(-1,-1)" fillRule="evenodd">
-            <path
-              d={path(design.pattern)}
-              fill={hexColor(design.colors[1 - baseColor])}
-            />
+            {design.layers.map((layer) => (
+              <path
+                key={layer.colorIndex}
+                d={path(layer.pattern)}
+                fill={hexColor(design.colors[layer.colorIndex])}
+              />
+            ))}
             {design.removedArea > 1 && (
               <path d={path(design.removed)} fill="#ff8a30" />
             )}
@@ -69,7 +73,9 @@ export function InlayReview({
           <strong>
             {design.pieces} loose {design.pieces === 1 ? 'insert' : 'inserts'}
           </strong>
-          <p>Two filaments. One personal case.</p>
+          <p>
+            {filaments} filament{filaments === 1 ? '' : 's'}. One personal case.
+          </p>
           <small>
             Orange marks cleaned-up details. Review the pattern before printing.
           </small>

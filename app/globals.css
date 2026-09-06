@@ -779,11 +779,12 @@ footer {
 }
 .palette {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .palette label {
   display: flex;
-  flex: 1;
+  flex: 1 1 140px;
   gap: 7px;
   align-items: center;
   padding: 9px 7px;

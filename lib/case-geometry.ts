@@ -300,10 +300,14 @@ export function createCaseGeometry(
     return outline(w, h, r).map(([x, y], i) => vertex(x, y, z(i)));
   }
   // Open lower edge provides charging and power-button access without assumed port offsets.
+  // Mirror it at the top on Paperwhite 10th generation for a symmetrical shell.
   // Corresponding perimeter samples keep the opening aligned across narrowed
   // outlines, so it is resolved once against the inner outline and reused by index.
   const opening = outline(iw, ih, radius).map(
-    ([x, y]) => y < -ih / 2 + 5 && Math.abs(x) < iw / 2 - 10,
+    ([x, y]) =>
+      (y < -ih / 2 + 5 ||
+        (model.id === "paperwhite-2018" && y > ih / 2 - 5)) &&
+      Math.abs(x) < iw / 2 - 10,
   );
   const wallHeight = (i: number) =>
     opening[i] ? CASE.base + 0.4 : CASE.base + model.depth + 0.65;
