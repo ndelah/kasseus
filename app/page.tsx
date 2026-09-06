@@ -19,6 +19,7 @@ import {
   Loader2,
   Info,
   Leaf,
+  Mountain,
 } from 'lucide-react';
 import {
   Select,
@@ -40,19 +41,28 @@ import {
   supportedModel,
   supportedModels,
 } from '@/lib/models';
-import { readArtwork, CASE, type Artwork } from '@/lib/case-geometry';
+import {
+  readArtwork,
+  CASE,
+  type Artwork,
+  type ArtworkPlacement,
+} from '@/lib/case-geometry';
 import { useInlay } from '@/hooks/use-inlay';
 import { exportInlay } from '@/lib/inlay-export';
 import { InlayReview } from '@/components/inlay-review';
+import { SculptedReview } from '@/components/sculpted-review';
+import type { DesignStyle } from '@/lib/inlay-geometry';
 export default function Home() {
   const [model, setModel] = useState(supportedModel);
   const [art, setArt] = useState<Artwork>();
   const [baseColor, setBaseColor] = useState(1);
+  const [placement, setPlacement] = useState<ArtworkPlacement>('centered');
+  const [style, setStyle] = useState<DesignStyle>('inlay');
   const {
     design,
     pending,
     error: geometryError,
-  } = useInlay(art, baseColor, model);
+  } = useInlay(art, baseColor, model, placement, style);
   const [imageUrl, setImageUrl] = useState('/ginkgo.png');
   const [filename, setFilename] = useState('Ginkgo · studio artwork');
   const [busy, setBusy] = useState(true);
@@ -68,7 +78,7 @@ export default function Home() {
   useEffect(() => {
     if (!imageUrl) return;
     const n = ++request.current;
-    readArtwork(imageUrl, model)
+    readArtwork(imageUrl, model, placement)
       .then((data) => {
         if (n === request.current) {
           setArt(data);
@@ -92,7 +102,7 @@ export default function Home() {
       // oxlint-disable-next-line react-hooks/exhaustive-deps
       request.current++;
     };
-  }, [imageUrl, model]);
+  }, [imageUrl, model, placement]);
   useEffect(() => {
     return () => {
       if (imageUrl.startsWith('blob:')) URL.revokeObjectURL(imageUrl);
@@ -116,6 +126,13 @@ export default function Home() {
     setImageUrl(URL.createObjectURL(file));
     setFilename(file.name);
     setBaseColor(0);
+    setView('artwork');
+  }
+  function selectStyle(next: DesignStyle) {
+    if (next === style) return;
+    setStyle(next);
+    setBaseColor(0);
+    setSaved(false);
     setView('artwork');
   }
   function selectModel(id: string | null) {
@@ -152,7 +169,7 @@ export default function Home() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `kasseus-${model.exportName}-${design.inserts ? 'inlay' : 'plain'}.zip`;
+      a.download = `kasseus-${model.exportName}-${design.kind === 'sculpted' ? 'sculpted' : design.inserts ? 'inlay' : 'plain'}.zip`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -329,10 +346,77 @@ export default function Home() {
                 </div>
               )}
               <p className="art-info">
-                Your image is separated into flat colors, with recessed pockets
-                and matching glue-in inserts.
+                {style === 'sculpted'
+                  ? 'Lines and shadows become raised grain on a single-piece case. No inserts — the back is shaped from the photograph.'
+                  : 'Your image is separated into flat colors, with recessed pockets and matching glue-in inserts.'}
               </p>
-              {art && design && (
+              {imageUrl && (
+                <fieldset className="art-placement">
+                  <legend>Case design</legend>
+                  <div>
+                    <button
+                      type="button"
+                      className={style === 'inlay' ? 'active' : ''}
+                      onClick={() => selectStyle('inlay')}
+                      aria-pressed={style === 'inlay'}
+                    >
+                      Inlaid
+                    </button>
+                    <button
+                      type="button"
+                      className={style === 'sculpted' ? 'active' : ''}
+                      onClick={() => selectStyle('sculpted')}
+                      aria-pressed={style === 'sculpted'}
+                    >
+                      Sculpted
+                    </button>
+                  </div>
+                  <small>
+                    {style === 'sculpted'
+                      ? 'Reads the grain, lines and shadows in your photo and raises them on the case.'
+                      : 'Cuts pockets for each flat color and prints matching glue-in inserts.'}
+                  </small>
+                </fieldset>
+              )}
+              {imageUrl && (
+                <fieldset className="art-placement">
+                  <legend>Artwork placement</legend>
+                  <div>
+                    <button
+                      type="button"
+                      className={placement === 'centered' ? 'active' : ''}
+                      onClick={() => setPlacement('centered')}
+                      aria-pressed={placement === 'centered'}
+                    >
+                      Centered
+                    </button>
+                    <button
+                      type="button"
+                      className={placement === 'stretched' ? 'active' : ''}
+                      onClick={() => setPlacement('stretched')}
+                      aria-pressed={placement === 'stretched'}
+                    >
+                      Stretch to edge
+                    </button>
+                  </div>
+                  <small>
+                    {placement === 'centered'
+                      ? 'Keeps the existing inset panel and crops from the centre.'
+                      : 'Fills the whole rounded exterior, with the design following its edge.'}
+                  </small>
+                </fieldset>
+              )}
+              {art && design && design.kind === 'sculpted' && (
+                <SculptedReview
+                  design={design}
+                  baseColor={baseColor}
+                  onColor={(n) => {
+                    setBaseColor(n);
+                    setSaved(false);
+                  }}
+                />
+              )}
+              {art && design && design.kind !== 'sculpted' && (
                 <InlayReview
                   design={design}
                   model={model}
@@ -367,7 +451,7 @@ export default function Home() {
                   pending ||
                   exporting ||
                   !design ||
-                  Boolean(art && !design.inserts)
+                  Boolean(art && design.kind !== 'sculpted' && !design.inserts)
                 }
               >
                 {exporting ? (
@@ -379,7 +463,10 @@ export default function Home() {
                 <ArrowUpRight size={16} />
               </button>
               <p className="export-caption">
-                <Box size={12} /> Case + inserts · separate STLs in a ZIP
+                <Box size={12} />{' '}
+                {design?.kind === 'sculpted'
+                  ? 'Single-piece case · STL in a ZIP'
+                  : 'Case + inserts · separate STLs in a ZIP'}
               </p>
               {saved && (
                 <output className="success">
@@ -407,7 +494,11 @@ export default function Home() {
               view={view}
               reset={reset}
             />
-            <span className="preview-name">The everyday back case.</span>
+            <span className="preview-name">
+              {design?.kind === 'sculpted'
+                ? 'The sculpted back case.'
+                : 'The everyday back case.'}
+            </span>
             <div className="preview-bottom">
               <div className="preview-tools">
                 <Tabs value={view} onValueChange={(v) => setView(String(v))}>
@@ -416,12 +507,21 @@ export default function Home() {
                     aria-label="Preview appearance"
                   >
                     <TabsTrigger value="artwork">
-                      <Layers size={14} /> Assembled
+                      {style === 'sculpted' ? (
+                        <Mountain size={14} />
+                      ) : (
+                        <Layers size={14} />
+                      )}{' '}
+                      {style === 'sculpted' ? 'Form' : 'Assembled'}
                     </TabsTrigger>
-                    <TabsTrigger value="relief">
-                      <Box size={14} /> Pockets
-                    </TabsTrigger>
-                    <TabsTrigger value="exploded">Separate</TabsTrigger>
+                    {style !== 'sculpted' && (
+                      <>
+                        <TabsTrigger value="relief">
+                          <Box size={14} /> Pockets
+                        </TabsTrigger>
+                        <TabsTrigger value="exploded">Separate</TabsTrigger>
+                      </>
+                    )}
                   </TabsList>
                 </Tabs>
                 <button
@@ -541,25 +641,23 @@ export default function Home() {
                 <p>
                   Export at 100% scale in millimetres. The case has a{' '}
                   {CASE.base} mm back, {CASE.wall} mm walls, {CASE.clearance} mm
-                  clearance per side and a small retaining lip. Pockets are 0.8
-                  mm deep. Inserts are 0.6 mm thick, with 0.2 mm side clearance
-                  and 0.05 mm for adhesive. Their faces sit 0.15 mm below the
-                  case surface.
+                  clearance per side and a small retaining lip.
+                  {style === 'sculpted'
+                    ? ' The sculpted grain rises up to 0.9 mm from the back.'
+                    : ' Pockets are 0.8 mm deep. Inserts are 0.6 mm thick, with 0.2 mm side clearance and 0.05 mm for adhesive. Their faces sit 0.15 mm below the case surface.'}
                 </p>
                 <p>
                   Use flexible TPU for fitting around the lip. Rigid materials
-                  may not flex enough to install. Print inserts flat. Inspect
-                  case orientation, bridging and supports in your slicer; pocket
-                  ceilings may need support.
+                  may not flex enough to install.
+                  {style === 'sculpted'
+                    ? ' Inspect case orientation, bridging and supports in your slicer; the textured back may need to print face-up.'
+                    : ' Print inserts flat. Inspect case orientation, bridging and supports in your slicer; pocket ceilings may need support.'}
                 </p>
                 <h3>Artwork becomes shape</h3>
                 <p>
-                  STL does not store color. Print the case and each insert color
-                  using matching filaments, then glue the inserts into their
-                  pockets. These are glue-in parts, not locking or tested
-                  press-fit pieces. Test adhesive compatibility first. Images
-                  are cropped and separated into flat colors; details that are
-                  too small to print are removed and highlighted in orange.
+                  {style === 'sculpted'
+                    ? `STL does not store color. The photograph's grain, lines and shadows are recovered as a height field and raised on the back, up to 0.9 mm, so the inner wall is not thinned. There are no pockets or inserts. Print the single STL in one filament.`
+                    : 'STL does not store color. Print the case and each insert color using matching filaments, then glue the inserts into their pockets. These are glue-in parts, not locking or tested press-fit pieces. Test adhesive compatibility first. Images are cropped and separated into flat colors; details that are too small to print are removed and highlighted in orange.'}
                 </p>
                 <h3>Check the fit</h3>
                 <p>
@@ -578,17 +676,16 @@ export default function Home() {
                 </p>
                 <h3>02 · Add something personal</h3>
                 <p>
-                  Upload a pattern. It stays on your device and becomes recessed
-                  pockets with matching inserts. Choose your case color and
-                  inspect the simplified pattern. Remove the artwork for a
-                  clean, plain shell.
+                  Upload a picture. It stays on your device. Choose Inlaid for
+                  flat-color pockets and glue-in inserts, or Sculpted to raise
+                  the grain, lines and shadows of a texture into the case back.
+                  Remove the artwork for a clean, plain shell.
                 </p>
                 <h3>03 · Make it yours</h3>
                 <p>
-                  Rotate the assembled case, inspect the pockets and separated
-                  inserts, then download your print kit. Import the STLs into
-                  your slicer in millimetres. See the printing notes for
-                  material and fit guidance.
+                  Rotate the case in 3D, then download your print kit. Import
+                  the STLs into your slicer in millimetres. See the printing
+                  notes for material and fit guidance.
                 </p>
               </>
             )}

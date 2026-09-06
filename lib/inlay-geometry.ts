@@ -10,13 +10,27 @@ import {
   artworkPanel,
   createCaseGeometry,
   type Artwork,
+  type ArtworkPlacement,
 } from './case-geometry';
 import {
   COLOR_SEPARATION,
   separateColors,
   tracePattern,
+  type RGB,
   type Separation,
 } from './color-separation';
+import { recoverTextureDepth, TEXTURE_RELIEF } from './texture-depth';
+
+/** How uploaded artwork is turned into a printable case. */
+export type DesignStyle = 'inlay' | 'sculpted';
+
+/** Filament references for a single-piece sculpted case. */
+export const SCULPTED_FILAMENTS: RGB[] = [
+  [225, 196, 165],
+  [48, 46, 44],
+  [122, 92, 70],
+  [186, 112, 86],
+];
 export const INLAY = {
   pocketDepth: 0.8,
   thickness: 0.6,
@@ -34,7 +48,14 @@ export type InsertLayer = {
   pieces: number;
   volume: number;
 };
+export type DepthPreview = {
+  width: number;
+  height: number;
+  values: Float32Array;
+};
+
 export type InlayDesign = {
+  kind: 'plain' | 'inlay' | 'sculpted';
   body: MeshData;
   inserts: MeshData | null;
   layers: InsertLayer[];
@@ -46,6 +67,8 @@ export type InlayDesign = {
   bodyVolume: number;
   insertVolume: number;
   removedArea: number;
+  reliefMm?: number;
+  depthMap?: DepthPreview;
 };
 export function meshGeometry(mesh: MeshData) {
   const g = new THREE.BufferGeometry();
@@ -87,6 +110,7 @@ export function buildInlay(
   art?: Artwork,
   baseColor = 0,
   model: SupportedModel = supportedModel,
+  placement: ArtworkPlacement = 'centered',
 ): InlayDesign {
   const owned: Array<{ delete(): void }> = [];
   const own = <T extends { delete(): void }>(o: T): T => {
@@ -127,7 +151,7 @@ export function buildInlay(
     const printable = (polygons: SimplePolygon[][]) => {
       if (polygons.length === 0) return null;
       const source = own(new CrossSection(polygons.flat(), 'EvenOdd'));
-      const panel = artworkPanel(model);
+      const panel = artworkPanel(model, placement);
       const boundary = own(
         new CrossSection(
           [roundedRectangle(panel.width, panel.height, panel.radius)],
@@ -148,6 +172,7 @@ export function buildInlay(
       return { raw, region: combine(kept) };
     };
     const result: InlayDesign = {
+      kind: art ? 'inlay' : 'plain',
       body: serialize(solid),
       inserts: null,
       layers: [],
@@ -173,7 +198,7 @@ export function buildInlay(
       );
       return result;
     }
-    const { width: widthMM, height: heightMM } = artworkPanel(model);
+    const { width: widthMM, height: heightMM } = artworkPanel(model, placement);
     const combined = printable(
       tracePattern(s, (label) => label !== bodyIndex, widthMM, heightMM),
     );
@@ -265,5 +290,75 @@ export function buildInlay(
   } finally {
     plain.dispose();
     owned.reverse().forEach((o) => o.delete());
+  }
+}
+
+function meshFromGeometry(geometry: THREE.BufferGeometry): MeshData {
+  return {
+    positions: new Float32Array(geometry.getAttribute('position').array),
+    indices: new Uint32Array(geometry.getIndex()!.array),
+  };
+}
+
+function signedVolume(mesh: MeshData) {
+  let volume = 0;
+  const p = mesh.positions;
+  const idx = mesh.indices;
+  for (let i = 0; i < idx.length; i += 3) {
+    const a = idx[i] * 3,
+      b = idx[i + 1] * 3,
+      c = idx[i + 2] * 3;
+    volume +=
+      (p[a] * (p[b + 1] * p[c + 2] - p[b + 2] * p[c + 1]) +
+        p[a + 1] * (p[b + 2] * p[c] - p[b] * p[c + 2]) +
+        p[a + 2] * (p[b] * p[c + 1] - p[b + 1] * p[c])) /
+      6;
+  }
+  return volume;
+}
+
+/**
+ * Build a single-piece case whose back is displaced by the depth recovered
+ * from a texture photograph. No pockets or inserts are cut.
+ */
+export function buildSculpted(
+  art: Artwork,
+  model: SupportedModel = supportedModel,
+  placement: ArtworkPlacement = 'centered',
+): InlayDesign {
+  const depth = recoverTextureDepth(art);
+  const geometry = createCaseGeometry(art, model, {
+    placement,
+    heightField: depth,
+  });
+  try {
+    const body = meshFromGeometry(geometry);
+    const warnings: string[] = [];
+    if (depth.peakMm < 0.08)
+      warnings.push(
+        'This image has little shading. Try a photo with clearer grain, lines or side lighting.',
+      );
+    return {
+      kind: 'sculpted',
+      body,
+      inserts: null,
+      layers: [],
+      colors: SCULPTED_FILAMENTS,
+      pattern: [],
+      removed: [],
+      pieces: 0,
+      warnings,
+      bodyVolume: signedVolume(body),
+      insertVolume: 0,
+      removedArea: 0,
+      reliefMm: Math.min(TEXTURE_RELIEF, depth.peakMm),
+      depthMap: {
+        width: depth.width,
+        height: depth.height,
+        values: depth.preview,
+      },
+    };
+  } finally {
+    geometry.dispose();
   }
 }

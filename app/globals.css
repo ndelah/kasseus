@@ -371,6 +371,45 @@ h1 em {
   color: #8b7f74;
   margin: 14px 0 0;
 }
+.art-placement {
+  border: 0;
+  padding: 0;
+  margin: 16px 0 0;
+}
+.art-placement legend {
+  color: #71655c;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.art-placement > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid #d9cec1;
+  border-radius: 9px;
+  background: #f8f2eb;
+}
+.art-placement button {
+  border: 0;
+  border-radius: 6px;
+  padding: 7px 5px;
+  background: transparent;
+  color: #77685e;
+  font-size: 12px;
+}
+.art-placement button.active {
+  background: #fff;
+  box-shadow: 0 1px 3px #76523c2e;
+  color: #684533;
+}
+.art-placement small {
+  display: block;
+  margin-top: 7px;
+  color: #8b7f74;
+  font-size: 11px;
+  line-height: 1.45;
+}
 .export-card {
   padding: 20px 23px;
 }
@@ -819,10 +858,16 @@ footer {
   gap: 15px;
   margin-top: 16px;
 }
-.pattern-review svg {
+.pattern-review svg,
+.pattern-review canvas.depth-preview {
   width: 80px;
   height: 112px;
   flex-shrink: 0;
+}
+.pattern-review canvas.depth-preview {
+  object-fit: cover;
+  border-radius: 6px;
+  background: #3d342c;
 }
 .pattern-review strong {
   font-size: 13px;

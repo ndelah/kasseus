@@ -1,7 +1,7 @@
-import * as THREE from "three";
-import { STLExporter } from "three/addons/exporters/STLExporter.js";
-import { supportedModel } from "./models";
-import { parseCaseProfile, type CaseProfile } from "./case-profile";
+import * as THREE from 'three';
+import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+import { supportedModel } from './models';
+import { parseCaseProfile, type CaseProfile } from './case-profile';
 export const CASE = {
   // Default-model dimensions retained for consumers of the original API.
   width: supportedModel.width,
@@ -19,20 +19,42 @@ export type Artwork = {
   data: Uint8ClampedArray;
 };
 
+/** Outward displacement of the case back, in millimetres, sampled in artwork UV. */
+export type HeightField = {
+  width: number;
+  height: number;
+  values: Float32Array;
+};
+
+/** Controls whether artwork remains centred in the inset back panel or fills it. */
+export type ArtworkPlacement = 'centered' | 'stretched';
+
+export type CaseGeometryOptions = {
+  placement?: ArtworkPlacement;
+  heightField?: HeightField;
+};
+
 /**
  * Return the inset, rounded panel that accepts artwork on the case back.
  * It follows the rear case contour so artwork cannot extend across a corner
  * and onto the side wall.
  */
-export function artworkPanel(model: CaseProfile = supportedModel) {
+export function artworkPanel(
+  model: CaseProfile = supportedModel,
+  placement: ArtworkPlacement = 'centered',
+) {
   const rear = model.backSections?.at(-1);
   const outerWidth =
     model.width + CASE.clearance * 2 + CASE.wall * 2 - 2 * (rear?.insetX ?? 0);
   const outerHeight =
-    model.height +
-    CASE.clearance * 2 +
-    CASE.wall * 2 -
-    2 * (rear?.insetY ?? 0);
+    model.height + CASE.clearance * 2 + CASE.wall * 2 - 2 * (rear?.insetY ?? 0);
+  const outerRadius = (rear?.radius ?? model.cornerRadius) + CASE.wall;
+  if (placement === 'stretched')
+    return {
+      width: outerWidth,
+      height: outerHeight,
+      radius: outerRadius,
+    };
   // Keep the established artwork dimensions, then round its corners by the
   // same inset from the measured rear outline.
   const width = model.width + 2 * (CASE.clearance + CASE.wall) - 12;
@@ -41,7 +63,7 @@ export function artworkPanel(model: CaseProfile = supportedModel) {
   return {
     width,
     height,
-    radius: Math.max(0.05, (rear?.radius ?? model.cornerRadius) + CASE.wall - inset),
+    radius: Math.max(0.05, outerRadius - inset),
   };
 }
 
@@ -61,6 +83,10 @@ const TAPER_PITCH = 0.3;
 
 /** Concentric rings tessellating the relief back so artwork height has somewhere to go. */
 const RELIEF_RINGS = 64;
+
+/** Finer sampling for a recovered texture height field (sides, then rings). */
+const SCULPTED_EDGE_PITCH = 1.4;
+const SCULPTED_RINGS = 80;
 
 type BackSection = {
   depth: number;
@@ -185,9 +211,16 @@ function refineTaper(sections: BackSection[]): BackSection[] {
 export function createCaseGeometry(
   art?: Artwork,
   model: CaseProfile = supportedModel,
+  options: CaseGeometryOptions = {},
 ) {
   parseCaseProfile(model);
   const radius = model.cornerRadius;
+  const placement = options.placement ?? 'centered';
+  const heightField = options.heightField;
+  const sculpted = Boolean(heightField);
+  const edgePitch = sculpted ? SCULPTED_EDGE_PITCH : EDGE_PITCH;
+  const reliefRings = sculpted ? SCULPTED_RINGS : RELIEF_RINGS;
+  const panel = artworkPanel(model, placement);
   const positions: number[] = [],
     uvs: number[] = [],
     indices: number[] = [];
@@ -200,11 +233,11 @@ export function createCaseGeometry(
   // width, height or radius. That is what lets rings be stitched pairwise.
   const ex = Math.max(
     2,
-    Math.ceil((ow - 2 * (radius + CASE.wall)) / EDGE_PITCH),
+    Math.ceil((ow - 2 * (radius + CASE.wall)) / edgePitch),
   );
   const ey = Math.max(
     2,
-    Math.ceil((oh - 2 * (radius + CASE.wall)) / EDGE_PITCH),
+    Math.ceil((oh - 2 * (radius + CASE.wall)) / edgePitch),
   );
   /**
    * Rounded rectangle as a closed counter-clockwise polyline: four straight
@@ -243,11 +276,31 @@ export function createCaseGeometry(
     arc(-cx, -cy, Math.PI);
     return points;
   }
+  function sampleField(field: HeightField, u: number, v: number) {
+    const x = u * (field.width - 1);
+    const y = v * (field.height - 1);
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    const x1 = Math.min(field.width - 1, x0 + 1);
+    const y1 = Math.min(field.height - 1, y0 + 1);
+    const tx = x - x0;
+    const ty = y - y0;
+    const at = (xx: number, yy: number) => field.values[yy * field.width + xx];
+    return (
+      at(x0, y0) * (1 - tx) * (1 - ty) +
+      at(x1, y0) * tx * (1 - ty) +
+      at(x0, y1) * (1 - tx) * ty +
+      at(x1, y1) * tx * ty
+    );
+  }
   function heightAt(x: number, y: number) {
-    if (!art) return 0;
-    const u = 0.5 - x / (ow - 12),
-      v = 0.5 - y / (oh - 12);
+    if (!art && !heightField) return 0;
+    const u = 0.5 - x / panel.width,
+      v = 0.5 - y / panel.height;
     if (u <= 0 || u >= 1 || v <= 0 || v >= 1) return 0;
+    const fade = Math.min(1, u * 25, (1 - u) * 25, v * 25, (1 - v) * 25);
+    if (heightField) return sampleField(heightField, u, v) * fade;
+    if (!art) return 0;
     const px = Math.min(art.width - 1, Math.floor(u * art.width)),
       py = Math.min(art.height - 1, Math.floor(v * art.height));
     const i = (py * art.width + px) * 4;
@@ -256,13 +309,12 @@ export function createCaseGeometry(
         art.data[i + 1] * 0.7152 +
         art.data[i + 2] * 0.0722) /
       255;
-    const fade = Math.min(1, u * 25, (1 - u) * 25, v * 25, (1 - v) * 25);
     return (1 - l) * (art.data[i + 3] / 255) * CASE.relief * fade;
   }
   function vertex(x: number, y: number, z: number) {
     const id = positions.length / 3;
     positions.push(x, y, z);
-    uvs.push(0.5 - x / (ow - 12), y / (oh - 12) + 0.5);
+    uvs.push(0.5 - x / panel.width, y / panel.height + 0.5);
     return id;
   }
   /**
@@ -279,9 +331,9 @@ export function createCaseGeometry(
         vertex(x * scale, y * scale, z(x * scale, y * scale)),
       );
     const rings = [ring(1)];
-    if (bottom && art)
-      for (let k = 1; k < RELIEF_RINGS; k++)
-        rings.push(ring(1 - k / RELIEF_RINGS));
+    if (bottom && (art || heightField))
+      for (let k = 1; k < reliefRings; k++)
+        rings.push(ring(1 - k / reliefRings));
     const centre = vertex(0, 0, z(0, 0));
     for (let k = 0; k + 1 < rings.length; k++) {
       const a = rings[k],
@@ -331,8 +383,7 @@ export function createCaseGeometry(
   // outlines, so it is resolved once against the inner outline and reused by index.
   const opening = outline(iw, ih, radius).map(
     ([x, y]) =>
-      (y < -ih / 2 + 5 ||
-        (model.id === "paperwhite-2018" && y > ih / 2 - 5)) &&
+      (y < -ih / 2 + 5 || (model.id === 'paperwhite-2018' && y > ih / 2 - 5)) &&
       Math.abs(x) < iw / 2 - 10,
   );
   const wallHeight = (i: number) =>
@@ -381,10 +432,10 @@ export function createCaseGeometry(
   connect(innerLip, innerUnder);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute(
-    "position",
+    'position',
     new THREE.Float32BufferAttribute(positions, 3),
   );
-  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.addGroup(0, backCount, 0);
   geometry.addGroup(backCount, indices.length - backCount, 1);
@@ -397,8 +448,11 @@ export function exportCaseSTL(geometry: THREE.BufferGeometry) {
   const result = new STLExporter().parse(mesh, { binary: true });
   return result;
 }
-export function artworkSize(model: CaseProfile = supportedModel) {
-  const panel = artworkPanel(model);
+export function artworkSize(
+  model: CaseProfile = supportedModel,
+  placement: ArtworkPlacement = 'centered',
+) {
+  const panel = artworkPanel(model, placement);
   return {
     width: 400,
     height: Math.round((400 * panel.height) / panel.width),
@@ -407,26 +461,31 @@ export function artworkSize(model: CaseProfile = supportedModel) {
 export async function readArtwork(
   url: string,
   model: CaseProfile = supportedModel,
+  placement: ArtworkPlacement = 'centered',
 ): Promise<Artwork> {
   const image = new Image();
   image.src = url;
   await image.decode();
   if (image.width * image.height > 40000000)
-    throw new Error("Please use an image smaller than 40 megapixels.");
-  const canvas = document.createElement("canvas");
-  const { width, height } = artworkSize(model);
+    throw new Error('Please use an image smaller than 40 megapixels.');
+  const canvas = document.createElement('canvas');
+  const { width, height } = artworkSize(model, placement);
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Your browser could not process this image.");
-  ctx.fillStyle = "#fff";
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Your browser could not process this image.');
+  ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, width, height);
-  const scale = Math.max(width / image.width, height / image.height),
-    w = image.width * scale,
-    h = image.height * scale;
-  ctx.drawImage(image, (width - w) / 2, (height - h) / 2, w, h);
+  if (placement === 'stretched') {
+    ctx.drawImage(image, 0, 0, width, height);
+  } else {
+    const scale = Math.max(width / image.width, height / image.height),
+      w = image.width * scale,
+      h = image.height * scale;
+    ctx.drawImage(image, (width - w) / 2, (height - h) / 2, w, h);
+  }
   return ctx.getImageData(0, 0, width, height);
 }
 export function caseFilename(model: CaseProfile, art?: Artwork) {
-  return `kasseus-${model.exportName}-${art ? "relief" : "plain"}-mm.stl`;
+  return `kasseus-${model.exportName}-${art ? 'relief' : 'plain'}-mm.stl`;
 }

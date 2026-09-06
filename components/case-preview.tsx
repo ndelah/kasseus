@@ -24,6 +24,7 @@ export default function CasePreview({
     camera: THREE.PerspectiveCamera;
     controls: OrbitControls;
     renderer: THREE.WebGLRenderer;
+    rake: THREE.DirectionalLight;
   } | null>(null);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -58,6 +59,9 @@ export default function CasePreview({
     const fill = new THREE.DirectionalLight(0xffffff, 0.85);
     fill.position.set(160, -10, 160);
     scene.add(fill);
+    const rake = new THREE.DirectionalLight(0xfff4e6, 0);
+    rake.position.set(220, 30, -18);
+    scene.add(rake);
     const mat = new THREE.MeshStandardMaterial({
       color: 0xe1c4a5,
       roughness: 0.9,
@@ -74,7 +78,7 @@ export default function CasePreview({
     controls.maxDistance = 650;
     controls.target.set(0, 0, 3);
     controls.update();
-    sceneRef.current = { mesh, inserts, camera, controls, renderer };
+    sceneRef.current = { mesh, inserts, camera, controls, renderer, rake };
     const observer = new ResizeObserver(() => {
       const w = el.clientWidth,
         h = el.clientHeight;
@@ -160,9 +164,11 @@ export default function CasePreview({
       s.inserts.add(insert);
     }
     if (design) {
-      (s.mesh.material as THREE.MeshStandardMaterial).color.set(
-        hexColor(design.colors[baseColor]),
-      );
+      const sculpted = design.kind === 'sculpted';
+      const mat = s.mesh.material as THREE.MeshStandardMaterial;
+      mat.color.set(hexColor(design.colors[baseColor]));
+      mat.roughness = sculpted ? 0.55 : 0.9;
+      s.rake.intensity = sculpted ? 1.55 : 0;
     }
     s.inserts.visible = layers.length > 0 && view !== 'relief';
     s.inserts.position.z = view === 'exploded' ? -18 : 0;
