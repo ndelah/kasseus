@@ -93,6 +93,12 @@ for (const layer of cornerDesign.layers)
       'inlay corners follow the rounded case back',
     );
   }
+const stretchedDesign = buildInlay(engine, art((x) => x < 50), 0, undefined, 'stretched');
+assert.ok(stretchedDesign.inserts);
+assert.ok(
+  stretchedDesign.insertVolume > cornerDesign.insertVolume,
+  'stretched artwork covers the full exterior back',
+);
 const tiny = buildInlay(
   engine,
   art(
