@@ -47,7 +47,7 @@ import { InlayReview } from '@/components/inlay-review';
 export default function Home() {
   const [model, setModel] = useState(supportedModel);
   const [art, setArt] = useState<Artwork>();
-  const [baseColor, setBaseColor] = useState(0);
+  const [baseColor, setBaseColor] = useState(1);
   const {
     design,
     pending,

@@ -43,22 +43,25 @@ export default function CasePreview({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // Compress highlights so pale filament retains detail at every angle.
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1;
     el.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 2000);
     camera.position.set(-105, 60, -370);
     camera.lookAt(0, 0, 0);
-    scene.add(new THREE.HemisphereLight(0xfff8ee, 0xb4a1b6, 2.5));
-    const light = new THREE.DirectionalLight(0xfff5e3, 3.5);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x89939f, 1.15));
+    const light = new THREE.DirectionalLight(0xffffff, 1.8);
     light.position.set(-150, 170, -200);
     scene.add(light);
-    const fill = new THREE.DirectionalLight(0xe3deff, 2);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.85);
     fill.position.set(160, -10, 160);
     scene.add(fill);
     const mat = new THREE.MeshStandardMaterial({
       color: 0xe1c4a5,
-      roughness: 0.72,
-      metalness: 0.03,
+      roughness: 0.9,
+      metalness: 0,
     });
     const mesh = new THREE.Mesh(new THREE.BufferGeometry(), mat);
     scene.add(mesh);
