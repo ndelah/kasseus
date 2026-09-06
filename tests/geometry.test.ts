@@ -20,22 +20,40 @@ for (let y = 4; y < 12; y++)
     data[p] = data[p + 1] = data[p + 2] = 0;
   }
 for (const model of supportedModels) {
-  const expected =
-    model.id === 'paperwhite-2013'
-      ? {
-          width: 117,
-          height: 169,
-          depth: 9.16,
-          cropHeight: 591,
-          exportName: 'paperwhite-6',
-        }
-      : model.id === 'paperwhite-2018' ? {width:115.84,height:166.57,depth:8.18,cropHeight:588,exportName:'paperwhite-10'} : {
-          width: 124.6,
-          height: 174.2,
-          depth: 8.1,
-          cropHeight: 570,
-          exportName: 'paperwhite-11',
-        };
+  const expectedById: Record<
+    string,
+    {
+      width: number;
+      height: number;
+      depth: number;
+      cropHeight: number;
+      exportName: string;
+    }
+  > = {
+    'paperwhite-2013': {
+      width: 117,
+      height: 169,
+      depth: 9.16,
+      cropHeight: 591,
+      exportName: 'paperwhite-6',
+    },
+    'paperwhite-2018': {
+      width: 115.84,
+      height: 166.57,
+      depth: 8.18,
+      cropHeight: 588,
+      exportName: 'paperwhite-10',
+    },
+    'paperwhite-2021': {
+      width: 124.6,
+      height: 174.2,
+      depth: 8.1,
+      cropHeight: 570,
+      exportName: 'paperwhite-11',
+    },
+  };
+  const expected = expectedById[model.id];
+  assert.ok(expected, `Missing independent expectations for ${model.id}`);
   assert.equal(model.width, expected.width);
   assert.equal(model.height, expected.height);
   assert.equal(model.depth, expected.depth);

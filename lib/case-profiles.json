@@ -29,9 +29,59 @@
     "exportName": "paperwhite-10",
     "source": "https://images-na.ssl-images-amazon.com/images/I/81-sqj3b5bS.pdf",
     "template": "rounded-back-open-bottom",
-    "cornerRadius": 7,
+    "cornerRadius": 9,
     "fitStatus": "prototype",
-    "notes": "Amazon User Guide, 2nd Edition, Product Specifications (printed page 50): 166.57 × 115.84 × 8.18 mm; use these rather than the rounded 167 × 116 × 8.2 mm catalog entry. Controls section (printed page 5) places the power button on the bottom edge. The 7 mm inner corner radius and retention are inherited prototype assumptions, not measured device curvature."
+    "notes": "Amazon User Guide, 2nd Edition, Product Specifications (printed page 50): 166.57 × 115.84 × 8.18 mm; use these rather than the rounded 167 × 116 × 8.2 mm catalog entry. Controls section (printed page 5) places the power button on the bottom edge. Retention remains a prototype assumption. Scan-informed update: approximately 9 mm corners and layered rear taper from PrintedForFun, https://www.printables.com/model/1699495-kindle-paperwhite-gen-10-tpu-bumper-and-3d-scan (CC BY-NC 4.0). Relative insets use the 2 mm scan outline as maximum, with depths scaled from 7.76 to the published 8.18 mm. The last measured outline is held to the rear for conservative clearance. See docs/kindle-paperwhite-gen-10-scan-analysis.md. Physical fit remains untested.",
+    "backSections": [
+      {
+        "depth": 0.0,
+        "insetX": 0,
+        "insetY": 0,
+        "radius": 9
+      },
+      {
+        "depth": 2.1082,
+        "insetX": 0,
+        "insetY": 0,
+        "radius": 9
+      },
+      {
+        "depth": 3.1624,
+        "insetX": 0.11,
+        "insetY": 0.14,
+        "radius": 9
+      },
+      {
+        "depth": 4.2165,
+        "insetX": 0.53,
+        "insetY": 0.59,
+        "radius": 8.17
+      },
+      {
+        "depth": 5.2706,
+        "insetX": 1.27,
+        "insetY": 1.38,
+        "radius": 7.54
+      },
+      {
+        "depth": 6.3247,
+        "insetX": 2.43,
+        "insetY": 2.61,
+        "radius": 7.16
+      },
+      {
+        "depth": 7.3789,
+        "insetX": 4.6,
+        "insetY": 4.93,
+        "radius": 5.6
+      },
+      {
+        "depth": 8.18,
+        "insetX": 4.6,
+        "insetY": 4.93,
+        "radius": 5.6
+      }
+    ]
   },
   {
     "id": "paperwhite-2013",

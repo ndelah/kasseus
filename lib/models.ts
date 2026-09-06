@@ -3,7 +3,8 @@ import { parseCaseProfile, type CaseProfile } from './case-profile';
 
 export const catalogSource = 'https://comparisontabl.es/kindle-e-readers/';
 export const supportedModels = profileData.map((input) => ({
-  ...parseCaseProfile(input), enabled: true as const,
+  ...parseCaseProfile(input),
+  enabled: true as const,
 }));
 export type SupportedModel = CaseProfile & { enabled: true };
 export const supportedModel = supportedModels[0];
@@ -134,13 +135,15 @@ export const models = [
   ],
 ].map(([id, name, generation, height, width, depth]) => {
   const profile = supportedModels.find((model) => model.id === id);
-  return profile ?? {
-    id: String(id),
-    name: String(name),
-    generation: String(generation),
-    height: Number(height),
-    width: Number(width),
-    depth: Number(depth),
-    enabled: false,
-  };
+  return (
+    profile ?? {
+      id: String(id),
+      name: String(name),
+      generation: String(generation),
+      height: Number(height),
+      width: Number(width),
+      depth: Number(depth),
+      enabled: false,
+    }
+  );
 });

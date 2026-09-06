@@ -92,19 +92,30 @@ export function createCaseGeometry(
     for (let j = ny; j > 0; j--) edge.push(start + j * (nx + 1));
     return edge;
   }
-  const back = surface(ow, oh, radius + CASE.wall, true);
+  const rear = model.backSections?.at(-1);
+  const back = surface(
+    ow - 2 * (rear?.insetX ?? 0),
+    oh - 2 * (rear?.insetY ?? 0),
+    (rear?.radius ?? radius) + CASE.wall,
+    true,
+  );
   const backCount = indices.length;
-  const floor = surface(iw, ih, radius, false);
+  const floor = surface(
+    iw - 2 * (rear?.insetX ?? 0),
+    ih - 2 * (rear?.insetY ?? 0),
+    rear?.radius ?? radius,
+    false,
+  );
   function boundary(
     w: number,
     h: number,
     r: number,
-    z: (x: number, y: number) => number,
+    z: (x: number, y: number, u: number, v: number) => number,
   ) {
     const e: number[] = [];
     const add = (u: number, v: number) => {
       const [x, y] = point(u, v, w, h, r);
-      e.push(vertex(x, y, z(x, y)));
+      e.push(vertex(x, y, z(x, y, u, v)));
     };
     for (let i = 0; i < nx; i++) add(i / nx, 0);
     for (let j = 0; j < ny; j++) add(1, j / ny);
@@ -128,10 +139,44 @@ export function createCaseGeometry(
   const innerUnder = boundary(iw, ih, radius, (x, y) =>
     Math.max(CASE.base + 0.15, wallHeight(x, y) - 0.8),
   );
-  connect(back, outerTop);
+  if (model.backSections) {
+    let outer = back;
+    let inner = floor;
+    // Corresponding perimeter samples keep the charging opening aligned across
+    // narrowed outlines. Compress its layers below the low rim, without coincident rings.
+    const opening = (u: number, v: number) => {
+      const [x, y] = point(u, v, iw, ih, radius);
+      return y < -ih / 2 + 5 && Math.abs(x) < iw / 2 - 10;
+    };
+    for (const section of [...model.backSections].reverse().slice(1)) {
+      const t = (model.depth - section.depth) / model.depth;
+      const nextOuter = boundary(
+        ow - 2 * section.insetX,
+        oh - 2 * section.insetY,
+        section.radius + CASE.wall,
+        (_x, _y, u, v) =>
+          opening(u, v) ? t * (CASE.base + 0.3) : t * model.depth,
+      );
+      const nextInner = boundary(
+        iw - 2 * section.insetX,
+        ih - 2 * section.insetY,
+        section.radius,
+        (_x, _y, u, v) =>
+          CASE.base + t * (opening(u, v) ? 0.1 : model.depth - 0.2),
+      );
+      connect(outer, nextOuter);
+      connect(nextInner, inner);
+      outer = nextOuter;
+      inner = nextInner;
+    }
+    connect(outer, outerTop);
+    connect(innerUnder, inner);
+  } else {
+    connect(back, outerTop);
+    connect(innerUnder, floor);
+  }
   connect(outerTop, innerLip);
   connect(innerLip, innerUnder);
-  connect(innerUnder, floor);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute(
     'position',
