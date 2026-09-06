@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import Module from 'manifold-3d';
 import { buildInlay, INLAY, meshGeometry } from '../lib/inlay-geometry';
 import { separateColors } from '../lib/color-separation';
-import { CASE, exportCaseSTL, type Artwork } from '../lib/case-geometry';
+import {
+  artworkPanel,
+  CASE,
+  exportCaseSTL,
+  type Artwork,
+} from '../lib/case-geometry';
 const engine = await Module();
 engine.setup();
 function art(shape: (x: number, y: number) => boolean): Artwork {
@@ -69,6 +74,25 @@ parts.forEach((p) => p.delete());
 const reversed = buildInlay(engine, sample, 1);
 assert.ok(reversed.bodyVolume !== design.bodyVolume);
 assert.ok(reversed.pieces > 0);
+const cornerDesign = buildInlay(engine, art((x) => x < 50));
+const panel = artworkPanel();
+const halfWidth = panel.width / 2;
+const halfHeight = panel.height / 2;
+for (const layer of cornerDesign.layers)
+  for (let i = 0; i < layer.mesh.positions.length; i += 3) {
+    const x = Math.abs(layer.mesh.positions[i]);
+    const y = Math.abs(layer.mesh.positions[i + 1]);
+    const insideStraightEdge =
+      x <= halfWidth - panel.radius || y <= halfHeight - panel.radius;
+    const cornerDistance = Math.hypot(
+      x - (halfWidth - panel.radius),
+      y - (halfHeight - panel.radius),
+    );
+    assert.ok(
+      insideStraightEdge || cornerDistance <= panel.radius + 1e-5,
+      'inlay corners follow the rounded case back',
+    );
+  }
 const tiny = buildInlay(
   engine,
   art(

@@ -6,7 +6,11 @@ import type {
   SimplePolygon,
 } from 'manifold-3d';
 import * as THREE from 'three';
-import { CASE, createCaseGeometry, type Artwork } from './case-geometry';
+import {
+  artworkPanel,
+  createCaseGeometry,
+  type Artwork,
+} from './case-geometry';
 import {
   COLOR_SEPARATION,
   separateColors,
@@ -51,6 +55,33 @@ export function meshGeometry(mesh: MeshData) {
   g.computeBoundingBox();
   return g;
 }
+
+/**
+ * Create a counter-clockwise rounded rectangle suitable for a Manifold
+ * cross-section. The artwork boundary uses the same dimensions and curvature
+ * as the case back's printable panel.
+ */
+function roundedRectangle(
+  width: number,
+  height: number,
+  radius: number,
+): SimplePolygon {
+  const r = Math.min(radius, width / 2, height / 2);
+  const x = width / 2 - r;
+  const y = height / 2 - r;
+  const points: SimplePolygon = [];
+  for (let corner = 0; corner < 4; corner++) {
+    const start = -Math.PI / 2 + (corner * Math.PI) / 2;
+    const cx = corner < 2 ? x : -x;
+    const cy = corner === 0 || corner === 3 ? -y : y;
+    for (let step = 0; step < 16; step++) {
+      const angle = start + (step * Math.PI) / 32;
+      points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+    }
+  }
+  return points;
+}
+
 export function buildInlay(
   module: ManifoldToplevel,
   art?: Artwork,
@@ -95,7 +126,16 @@ export function buildInlay(
     };
     const printable = (polygons: SimplePolygon[][]) => {
       if (polygons.length === 0) return null;
-      const raw = own(new CrossSection(polygons.flat(), 'EvenOdd'));
+      const source = own(new CrossSection(polygons.flat(), 'EvenOdd'));
+      const panel = artworkPanel(model);
+      const boundary = own(
+        new CrossSection(
+          [roundedRectangle(panel.width, panel.height, panel.radius)],
+          'EvenOdd',
+        ),
+      );
+      // Crop before simplifying so no insert can spill over the curved back edge.
+      const raw = own(source.intersect(boundary));
       const simple = own(raw.simplify(0.12));
       const core = own(simple.offset(-INLAY.minWidth / 2, 'Round', 2, 16));
       const expanded = own(core.offset(INLAY.minWidth / 2, 'Round', 2, 16));
@@ -133,8 +173,7 @@ export function buildInlay(
       );
       return result;
     }
-    const widthMM = model.width + 2 * (CASE.clearance + CASE.wall) - 12;
-    const heightMM = model.height + 2 * (CASE.clearance + CASE.wall) - 12;
+    const { width: widthMM, height: heightMM } = artworkPanel(model);
     const combined = printable(
       tracePattern(s, (label) => label !== bodyIndex, widthMM, heightMM),
     );

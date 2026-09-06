@@ -20,6 +20,32 @@ export type Artwork = {
 };
 
 /**
+ * Return the inset, rounded panel that accepts artwork on the case back.
+ * It follows the rear case contour so artwork cannot extend across a corner
+ * and onto the side wall.
+ */
+export function artworkPanel(model: CaseProfile = supportedModel) {
+  const rear = model.backSections?.at(-1);
+  const outerWidth =
+    model.width + CASE.clearance * 2 + CASE.wall * 2 - 2 * (rear?.insetX ?? 0);
+  const outerHeight =
+    model.height +
+    CASE.clearance * 2 +
+    CASE.wall * 2 -
+    2 * (rear?.insetY ?? 0);
+  // Keep the established artwork dimensions, then round its corners by the
+  // same inset from the measured rear outline.
+  const width = model.width + 2 * (CASE.clearance + CASE.wall) - 12;
+  const height = model.height + 2 * (CASE.clearance + CASE.wall) - 12;
+  const inset = Math.max((outerWidth - width) / 2, (outerHeight - height) / 2);
+  return {
+    width,
+    height,
+    radius: Math.max(0.05, (rear?.radius ?? model.cornerRadius) + CASE.wall - inset),
+  };
+}
+
+/**
  * Subdivisions per 90 degree corner arc. Corners are sampled by angle rather
  * than by position along the case, so every segment carries the same share of
  * the curve. At the 10.6 mm outer radius this leaves a 0.35 mm chord and under
@@ -372,13 +398,10 @@ export function exportCaseSTL(geometry: THREE.BufferGeometry) {
   return result;
 }
 export function artworkSize(model: CaseProfile = supportedModel) {
-  // Match the panel used by both the relief height field and preview UVs.
-  const border = 2 * (CASE.clearance + CASE.wall) - 12;
+  const panel = artworkPanel(model);
   return {
     width: 400,
-    height: Math.round(
-      (400 * (model.height + border)) / (model.width + border),
-    ),
+    height: Math.round((400 * panel.height) / panel.width),
   };
 }
 export async function readArtwork(
