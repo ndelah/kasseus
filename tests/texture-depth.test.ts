@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { unzipSync } from 'fflate';
-import { type Artwork } from '../lib/case-geometry';
+import { type Artwork, SCULPTED_GRID_PITCH } from '../lib/case-geometry';
 import { exportInlay } from '../lib/inlay-export';
 import { buildSculpted } from '../lib/inlay-geometry';
 import { supportedModel } from '../lib/models';
@@ -111,6 +111,29 @@ assert.ok(
   'relief stays within the print budget',
 );
 assert.ok(centreZ < rimZ - 0.15, 'the bump is taller than the faded rim');
+
+const interior: number[] = [];
+for (let i = 0; i < idx.length; i += 3) {
+  const pts = [idx[i], idx[i + 1], idx[i + 2]].map((id) => [
+    pos[id * 3],
+    pos[id * 3 + 1],
+    pos[id * 3 + 2],
+  ]);
+  if (pts.some((p) => p[2] > 0.01)) continue;
+  if (pts.some((p) => Math.hypot(p[0], p[1]) > 40)) continue;
+  for (const [a, b] of [
+    [0, 1],
+    [1, 2],
+    [2, 0],
+  ] as const)
+    interior.push(Math.hypot(pts[a][0] - pts[b][0], pts[a][1] - pts[b][1]));
+}
+const meanEdge = interior.reduce((s, e) => s + e, 0) / interior.length;
+assert.ok(interior.length > 100, 'the grain is carried by an interior grid');
+assert.ok(
+  meanEdge < SCULPTED_GRID_PITCH * 1.6,
+  'sculpted facets stay close to the grid pitch',
+);
 
 const files = unzipSync(exportInlay(design, supportedModel, 0));
 assert.deepEqual(Object.keys(files).sort(), ['READ-ME.txt', 'case.stl']);

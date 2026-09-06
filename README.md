@@ -44,7 +44,10 @@ The starter's full `npm run lint` also scans untouched component-library code wi
 
 ## Sample art
 
-`public/ginkgo.png` was generated once with the built-in image-generation tool. Prompt: “Portrait 3:4 botanical linocut of a single elegant ginkgo branch with fan-shaped leaves in muted terracotta ink on pale warm cream paper. Refined editorial Japanese print aesthetic, hand-carved linocut with subtle ink texture and clear leaf silhouettes. One graceful branch, large graceful negative space, balanced airy portrait composition, full flat artwork with no perspective. No text, signature, watermark, device, case, UI, frame or mockup.”
+The studio opens on a planar sample so Inlaid has distinct flat colors to pocket. Switching to Sculpted loads a relief photograph instead.
+
+- `public/yellow_woodrain_waves.jpg` — default Inlaid artwork: a two-tone yellow wood-grain pattern of stacked vertical waves.
+- `public/texture6.jpg` — default Sculpted artwork: a matte carved-grain photograph with concentric ridges and valleys.
 
 ## Sculpted texture
 

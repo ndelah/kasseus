@@ -84,9 +84,12 @@ const TAPER_PITCH = 0.3;
 /** Concentric rings tessellating the relief back so artwork height has somewhere to go. */
 const RELIEF_RINGS = 64;
 
-/** Finer sampling for a recovered texture height field (sides, then rings). */
-const SCULPTED_EDGE_PITCH = 1.4;
-const SCULPTED_RINGS = 80;
+/** Wall outline pitch for a sculpted back; the grain itself uses a Cartesian grid. */
+const SCULPTED_EDGE_PITCH = 1;
+/** Spacing of the sculpted height-field grid, in millimetres. */
+export const SCULPTED_GRID_PITCH = 0.5;
+/** Artwork raster width used when recovering a texture height field. */
+export const SCULPTED_ARTWORK_WIDTH = 800;
 
 type BackSection = {
   depth: number;
@@ -219,7 +222,7 @@ export function createCaseGeometry(
   const heightField = options.heightField;
   const sculpted = Boolean(heightField);
   const edgePitch = sculpted ? SCULPTED_EDGE_PITCH : EDGE_PITCH;
-  const reliefRings = sculpted ? SCULPTED_RINGS : RELIEF_RINGS;
+  const reliefRings = RELIEF_RINGS;
   const panel = artworkPanel(model, placement);
   const positions: number[] = [],
     uvs: number[] = [],
@@ -317,21 +320,182 @@ export function createCaseGeometry(
     uvs.push(0.5 - x / panel.width, y / panel.height + 0.5);
     return id;
   }
+  function tri(a: number, b: number, c: number, bottom: boolean) {
+    if (a === b || b === c || a === c) return;
+    if (bottom) indices.push(a, b, c);
+    else indices.push(a, c, b);
+  }
+  function insideRoundedRect(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    r0: number,
+    inset: number,
+  ) {
+    const hw = w / 2 - inset,
+      hh = h / 2 - inset;
+    if (hw <= 0 || hh <= 0) return false;
+    const rr = Math.max(0.05, Math.min(r0 - inset, hw, hh));
+    const ax = Math.abs(x),
+      ay = Math.abs(y);
+    if (ax > hw || ay > hh) return false;
+    if (ax <= hw - rr || ay <= hh - rr) return true;
+    return Math.hypot(ax - (hw - rr), ay - (hh - rr)) <= rr + 1e-9;
+  }
+  /**
+   * Walk the outer vertex cycle of a filled vertex grid, interior on the left
+   * so the loop is counter-clockwise like the case outline.
+   */
+  function gridBoundary(ids: number[][]): number[] {
+    const rows = ids.length,
+      cols = ids[0].length;
+    const at = (i: number, j: number) =>
+      i >= 0 && j >= 0 && i < cols && j < rows ? ids[j][i] : -1;
+    const cell = (i: number, j: number) =>
+      at(i, j) >= 0 &&
+      at(i + 1, j) >= 0 &&
+      at(i, j + 1) >= 0 &&
+      at(i + 1, j + 1) >= 0;
+    const next = new Map<number, number>();
+    const link = (a: number, b: number) => {
+      if (a >= 0 && b >= 0) next.set(a, b);
+    };
+    for (let j = 0; j < rows - 1; j++)
+      for (let i = 0; i < cols; i++) {
+        const a = at(i, j),
+          b = at(i, j + 1);
+        if (a < 0 || b < 0) continue;
+        const left = cell(i - 1, j),
+          right = cell(i, j);
+        if (left && !right) link(a, b);
+        else if (right && !left) link(b, a);
+      }
+    for (let j = 0; j < rows; j++)
+      for (let i = 0; i < cols - 1; i++) {
+        const a = at(i, j),
+          b = at(i + 1, j);
+        if (a < 0 || b < 0) continue;
+        const above = cell(i, j),
+          below = cell(i, j - 1);
+        if (above && !below) link(a, b);
+        else if (below && !above) link(b, a);
+      }
+    if (next.size === 0) return [];
+    const start = next.keys().next().value as number;
+    const loop: number[] = [];
+    let cur = start;
+    do {
+      loop.push(cur);
+      const nxt = next.get(cur);
+      if (nxt === undefined) break;
+      cur = nxt;
+    } while (cur !== start && loop.length <= next.size + 1);
+    return loop;
+  }
+  function zipper(outer: number[], inner: number[], bottom: boolean) {
+    if (inner.length < 3) return false;
+    let best = 0,
+      bestD = Infinity;
+    const ox = positions[outer[0] * 3],
+      oy = positions[outer[0] * 3 + 1];
+    for (let k = 0; k < inner.length; k++) {
+      const d = Math.hypot(
+        positions[inner[k] * 3] - ox,
+        positions[inner[k] * 3 + 1] - oy,
+      );
+      if (d < bestD) {
+        bestD = d;
+        best = k;
+      }
+    }
+    const rim = inner.slice(best).concat(inner.slice(0, best));
+    const ni = outer.length,
+      nj = rim.length;
+    let i = 0,
+      j = 0,
+      left = ni,
+      right = nj;
+    const dist = (a: number, b: number) =>
+      Math.hypot(
+        positions[a * 3] - positions[b * 3],
+        positions[a * 3 + 1] - positions[b * 3 + 1],
+      );
+    while (left > 0 || right > 0) {
+      const i2 = (i + 1) % ni,
+        j2 = (j + 1) % nj;
+      const stepInner =
+        left === 0 ||
+        (right > 0 && dist(outer[i], rim[j2]) < dist(outer[i2], rim[j]));
+      if (stepInner) {
+        tri(outer[i], rim[j], rim[j2], bottom);
+        j = j2;
+        right--;
+      } else {
+        tri(outer[i], rim[j], outer[i2], bottom);
+        i = i2;
+        left--;
+      }
+    }
+    return true;
+  }
   /**
    * Close off a rounded-rectangle outline. The outline is convex, so a flat cap
    * needs nothing but a fan from its centre; a relief back instead gets
    * concentric scaled copies of the same outline to carry the height field.
+   * A sculpted back uses a Cartesian grid so grain is not stair-stepped by
+   * polar rings.
    */
   function cap(w: number, h: number, r: number, bottom: boolean) {
     const shape = outline(w, h, r);
     const n = shape.length;
     const z = (x: number, y: number) => (bottom ? -heightAt(x, y) : CASE.base);
+    if (bottom && sculpted) {
+      const outer = shape.map(([x, y]) => vertex(x, y, z(x, y)));
+      const pitch = SCULPTED_GRID_PITCH;
+      const inset = pitch * 0.7;
+      const gw = w - 2 * inset,
+        gh = h - 2 * inset;
+      const nx = Math.max(2, Math.round(gw / pitch));
+      const ny = Math.max(2, Math.round(gh / pitch));
+      const ids: number[][] = [];
+      for (let j = 0; j <= ny; j++) {
+        const y = -gh / 2 + (j / ny) * gh;
+        const row: number[] = [];
+        for (let i = 0; i <= nx; i++) {
+          const x = -gw / 2 + (i / nx) * gw;
+          row.push(
+            insideRoundedRect(x, y, w, h, r, inset)
+              ? vertex(x, y, z(x, y))
+              : -1,
+          );
+        }
+        ids.push(row);
+      }
+      for (let j = 0; j < ny; j++)
+        for (let i = 0; i < nx; i++) {
+          const a = ids[j][i],
+            b = ids[j][i + 1],
+            c = ids[j + 1][i],
+            d = ids[j + 1][i + 1];
+          if (a < 0 || b < 0 || c < 0 || d < 0) continue;
+          tri(a, c, b, true);
+          tri(b, c, d, true);
+        }
+      const inner = gridBoundary(ids);
+      if (!zipper(outer, inner, true)) {
+        const centre = vertex(0, 0, z(0, 0));
+        for (let i = 0; i < n; i++)
+          tri(outer[i], centre, outer[(i + 1) % n], true);
+      }
+      return outer;
+    }
     const ring = (scale: number) =>
       shape.map(([x, y]) =>
         vertex(x * scale, y * scale, z(x * scale, y * scale)),
       );
     const rings = [ring(1)];
-    if (bottom && (art || heightField))
+    if (bottom && art)
       for (let k = 1; k < reliefRings; k++)
         rings.push(ring(1 - k / reliefRings));
     const centre = vertex(0, 0, z(0, 0));
@@ -451,17 +615,19 @@ export function exportCaseSTL(geometry: THREE.BufferGeometry) {
 export function artworkSize(
   model: CaseProfile = supportedModel,
   placement: ArtworkPlacement = 'centered',
+  widthPx = 400,
 ) {
   const panel = artworkPanel(model, placement);
   return {
-    width: 400,
-    height: Math.round((400 * panel.height) / panel.width),
+    width: widthPx,
+    height: Math.round((widthPx * panel.height) / panel.width),
   };
 }
 export async function readArtwork(
   url: string,
   model: CaseProfile = supportedModel,
   placement: ArtworkPlacement = 'centered',
+  widthPx = 400,
 ): Promise<Artwork> {
   const image = new Image();
   image.src = url;
@@ -469,7 +635,7 @@ export async function readArtwork(
   if (image.width * image.height > 40000000)
     throw new Error('Please use an image smaller than 40 megapixels.');
   const canvas = document.createElement('canvas');
-  const { width, height } = artworkSize(model, placement);
+  const { width, height } = artworkSize(model, placement, widthPx);
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');

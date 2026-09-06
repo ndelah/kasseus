@@ -34,9 +34,9 @@ export function recoverTextureDepth(art: Artwork): TextureDepth {
     luma[i] = r * LUMA_R + g * LUMA_G + b * LUMA_B;
   }
 
-  const fineBase = boxBlur(luma, w, h, 2);
-  const mediumBase = boxBlur(luma, w, h, 8);
-  const formBase = boxBlur(luma, w, h, 24);
+  const fineBase = boxBlur(luma, w, h, 1);
+  const mediumBase = boxBlur(luma, w, h, 6);
+  const formBase = boxBlur(luma, w, h, 16);
   const fine = subtract(luma, fineBase);
   const medium = subtract(fineBase, mediumBase);
   const form = subtract(mediumBase, formBase);

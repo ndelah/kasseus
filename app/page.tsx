@@ -44,6 +44,7 @@ import {
 import {
   readArtwork,
   CASE,
+  SCULPTED_ARTWORK_WIDTH,
   type Artwork,
   type ArtworkPlacement,
 } from '@/lib/case-geometry';
@@ -52,6 +53,29 @@ import { exportInlay } from '@/lib/inlay-export';
 import { InlayReview } from '@/components/inlay-review';
 import { SculptedReview } from '@/components/sculpted-review';
 import type { DesignStyle } from '@/lib/inlay-geometry';
+
+/** Studio samples shown until the user uploads their own artwork. */
+const STUDIO_SAMPLES = {
+  inlay: {
+    url: '/yellow_woodrain_waves.jpg',
+    name: 'Yellow woodrain waves · studio artwork',
+  },
+  sculpted: {
+    url: '/texture6.jpg',
+    name: 'Texture 6 · studio artwork',
+  },
+} as const;
+
+/**
+ * Returns true when the current preview is still a built-in sample,
+ * so switching Inlaid/Sculpted can swap the matching default image.
+ */
+function isStudioSample(url: string) {
+  return (
+    url === STUDIO_SAMPLES.inlay.url || url === STUDIO_SAMPLES.sculpted.url
+  );
+}
+
 export default function Home() {
   const [model, setModel] = useState(supportedModel);
   const [art, setArt] = useState<Artwork>();
@@ -63,8 +87,8 @@ export default function Home() {
     pending,
     error: geometryError,
   } = useInlay(art, baseColor, model, placement, style);
-  const [imageUrl, setImageUrl] = useState('/ginkgo.png');
-  const [filename, setFilename] = useState('Ginkgo · studio artwork');
+  const [imageUrl, setImageUrl] = useState<string>(STUDIO_SAMPLES.inlay.url);
+  const [filename, setFilename] = useState<string>(STUDIO_SAMPLES.inlay.name);
   const [busy, setBusy] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
@@ -78,7 +102,12 @@ export default function Home() {
   useEffect(() => {
     if (!imageUrl) return;
     const n = ++request.current;
-    readArtwork(imageUrl, model, placement)
+    readArtwork(
+      imageUrl,
+      model,
+      placement,
+      style === 'sculpted' ? SCULPTED_ARTWORK_WIDTH : 400,
+    )
       .then((data) => {
         if (n === request.current) {
           setArt(data);
@@ -102,7 +131,7 @@ export default function Home() {
       // oxlint-disable-next-line react-hooks/exhaustive-deps
       request.current++;
     };
-  }, [imageUrl, model, placement]);
+  }, [imageUrl, model, placement, style]);
   useEffect(() => {
     return () => {
       if (imageUrl.startsWith('blob:')) URL.revokeObjectURL(imageUrl);
@@ -134,6 +163,21 @@ export default function Home() {
     setBaseColor(0);
     setSaved(false);
     setView('artwork');
+    if (isStudioSample(imageUrl)) {
+      const sample = STUDIO_SAMPLES[next];
+      if (sample.url === imageUrl) return;
+      request.current++;
+      setBusy(true);
+      setArt(undefined);
+      setError('');
+      setImageUrl(sample.url);
+      setFilename(sample.name);
+      return;
+    }
+    if (imageUrl) {
+      setBusy(true);
+      setArt(undefined);
+    }
   }
   function selectModel(id: string | null) {
     const next = supportedModels.find((candidate) => candidate.id === id);
