@@ -102,6 +102,7 @@ Import ${result.filename} in millimetres at 100% scale. STL does not encode unit
 This plain shell has no artwork or inserts. The open side faces +Z; the flat outside back is at Z=0.
 Start with the flat back on the bed and inspect the retaining lip/overhangs in your slicer.
 Exterior: ${result.report.shell.exterior}.
+${result.report.shell.edgeTreatment ? 'Edge treatment: 0.4 mm bed chamfer at 45 degrees; 0.5 mm rounded upper rim. The access openings have no retaining hook.' : ''}
 Backing ${result.report.shell.backing} mm; walls ${result.report.shell.wall} mm; clearance ${result.report.shell.clearancePerSide} mm per side.
 Lower edge (-Y) is open for ${profile.port} and bottom power-button access.
 Corner radius ${profile.cornerRadius} mm. ${profile.backSections ? 'Scan-informed inner rear taper; depths normalized to published thickness and final outline held for clearance.' : 'Corner radius is a prototype assumption; no measured rear taper available.'} Physical fit needs testing.

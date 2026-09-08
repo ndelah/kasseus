@@ -460,7 +460,12 @@ h1 em {
   min-height: 675px;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(ellipse at 45% 38%, #647282, #465363 65%, #354252);
+  background: radial-gradient(
+    ellipse at 45% 38%,
+    #647282,
+    #465363 65%,
+    #354252
+  );
 }
 .preview-header {
   position: absolute;
@@ -887,4 +892,30 @@ footer {
   border-radius: 8px;
   padding: 9px;
   margin-top: 10px;
+}
+
+.printing-notes {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.printing-notes summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.5rem 0;
+}
+.printing-notes summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.printing-notes section {
+  margin-top: 1rem;
+}
+.printing-notes h4 {
+  margin: 0 0 0.35rem;
+  font-size: inherit;
+}
+.printing-notes p {
+  margin: 0;
 }

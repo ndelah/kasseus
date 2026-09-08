@@ -136,7 +136,11 @@ assert.ok(
 );
 
 const files = unzipSync(exportInlay(design, supportedModel, 0));
-assert.deepEqual(Object.keys(files).sort(), ['READ-ME.txt', 'case.stl']);
+assert.deepEqual(Object.keys(files).sort(), [
+  'PRINT-NOTES.txt',
+  'READ-ME.txt',
+  'case.stl',
+]);
 const note = new TextDecoder().decode(files['READ-ME.txt']);
 assert.match(note, /Sculpted texture case/);
 assert.doesNotMatch(note, /loose inserts/);
@@ -145,4 +149,9 @@ console.log(
   idx.length / 3,
   'triangles, ZIP',
   Object.keys(files).join(','),
+);
+
+assert.match(
+  new TextDecoder().decode(files['PRINT-NOTES.txt']),
+  /textured face may need to point up/,
 );

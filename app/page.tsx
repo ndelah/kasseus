@@ -43,13 +43,13 @@ import {
 } from '@/lib/models';
 import {
   readArtwork,
-  CASE,
   SCULPTED_ARTWORK_WIDTH,
   type Artwork,
   type ArtworkPlacement,
 } from '@/lib/case-geometry';
 import { useInlay } from '@/hooks/use-inlay';
 import { exportInlay } from '@/lib/inlay-export';
+import { printingNotes } from '@/lib/printing-notes';
 import { InlayReview } from '@/components/inlay-review';
 import { SculptedReview } from '@/components/sculpted-review';
 import type { DesignStyle } from '@/lib/inlay-geometry';
@@ -512,6 +512,17 @@ export default function Home() {
                   ? 'Single-piece case · STL in a ZIP'
                   : 'Case + inserts · separate STLs in a ZIP'}
               </p>
+              <details className="printing-notes">
+                <summary>Printing notes · included in your ZIP</summary>
+                {printingNotes(model, art ? style : 'plain').map(
+                  ({ title, body }) => (
+                    <section key={title}>
+                      <h4>{title}</h4>
+                      <p>{body}</p>
+                    </section>
+                  ),
+                )}
+              </details>
               {saved && (
                 <output className="success">
                   Print kit downloaded. Unzip it and open the STLs in your
@@ -681,35 +692,14 @@ export default function Home() {
               </>
             ) : modal === 'print' ? (
               <>
-                <h3>A starting point for your first print</h3>
-                <p>
-                  Export at 100% scale in millimetres. The case has a{' '}
-                  {CASE.base} mm back, {CASE.wall} mm walls, {CASE.clearance} mm
-                  clearance per side and a small retaining lip.
-                  {style === 'sculpted'
-                    ? ' The sculpted grain rises up to 0.9 mm from the back.'
-                    : ' Pockets are 0.8 mm deep. Inserts are 0.6 mm thick, with 0.2 mm side clearance and 0.05 mm for adhesive. Their faces sit 0.15 mm below the case surface.'}
-                </p>
-                <p>
-                  Use flexible TPU for fitting around the lip. Rigid materials
-                  may not flex enough to install.
-                  {style === 'sculpted'
-                    ? ' Inspect case orientation, bridging and supports in your slicer; the textured back may need to print face-up.'
-                    : ' Print inserts flat. Inspect case orientation, bridging and supports in your slicer; pocket ceilings may need support.'}
-                </p>
-                <h3>Artwork becomes shape</h3>
-                <p>
-                  {style === 'sculpted'
-                    ? `STL does not store color. The photograph's grain, lines and shadows are recovered as a height field and raised on the back, up to 0.9 mm, so the inner wall is not thinned. There are no pockets or inserts. Print the single STL in one filament.`
-                    : 'STL does not store color. Print the case and each insert color using matching filaments, then glue the inserts into their pockets. These are glue-in parts, not locking or tested press-fit pieces. Test adhesive compatibility first. Images are cropped and separated into flat colors; details that are too small to print are removed and highlighted in orange.'}
-                </p>
-                <h3>Check the fit</h3>
-                <p>
-                  This is an untested physical prototype based on published
-                  outer dimensions. Corner curvature, retention and printer
-                  tolerances need a test print before a final case. The lower
-                  edge is open for {model.port} and power-button access.
-                </p>
+                {printingNotes(model, art ? style : 'plain').map(
+                  ({ title, body }) => (
+                    <section key={title}>
+                      <h3>{title}</h3>
+                      <p>{body}</p>
+                    </section>
+                  ),
+                )}
               </>
             ) : (
               <>

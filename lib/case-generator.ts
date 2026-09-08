@@ -1,5 +1,6 @@
 import {
   CASE,
+  PAPERWHITE_10_EDGES,
   createCaseGeometry,
   exportCaseSTL,
   caseFilename,
@@ -161,7 +162,12 @@ export function generateCase(input: unknown) {
           backing: CASE.base,
           cornerRadius: profile.cornerRadius,
           backSections: profile.backSections ?? null,
-          exterior: profile.id === 'paperwhite-2018' ? 'vertical-rounded-rectangle' : 'profile-taper',
+          exterior:
+            profile.id === 'paperwhite-2018'
+              ? 'vertical-with-bed-chamfer-and-rounded-rim'
+              : 'profile-taper',
+          edgeTreatment:
+            profile.id === 'paperwhite-2018' ? PAPERWHITE_10_EDGES : null,
           retainingLip: 0.5,
           bottomRimHeight: 0.4,
         },

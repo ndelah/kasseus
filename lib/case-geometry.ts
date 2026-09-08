@@ -13,6 +13,12 @@ export const CASE = {
   radius: 7,
   relief: 0.65,
 };
+// Small edge treatments for the Paperwhite 10 shell, in millimetres.
+export const PAPERWHITE_10_EDGES = {
+  bedChamfer: 0.4,
+  rimRadius: 0.5,
+  rimSegments: 8,
+};
 export type Artwork = {
   width: number;
   height: number;
@@ -43,12 +49,22 @@ export function artworkPanel(
   model: CaseProfile = supportedModel,
   placement: ArtworkPlacement = 'centered',
 ) {
-  const rear = model.id === 'paperwhite-2018' ? undefined : model.backSections?.at(-1);
+  const chamfer =
+    model.id === 'paperwhite-2018' ? PAPERWHITE_10_EDGES.bedChamfer : 0;
+  const rear =
+    model.id === 'paperwhite-2018' ? undefined : model.backSections?.at(-1);
   const outerWidth =
-    model.width + CASE.clearance * 2 + CASE.wall * 2 - 2 * (rear?.insetX ?? 0);
+    model.width +
+    CASE.clearance * 2 +
+    CASE.wall * 2 -
+    2 * ((rear?.insetX ?? 0) + chamfer);
   const outerHeight =
-    model.height + CASE.clearance * 2 + CASE.wall * 2 - 2 * (rear?.insetY ?? 0);
-  const outerRadius = (rear?.radius ?? model.cornerRadius) + CASE.wall;
+    model.height +
+    CASE.clearance * 2 +
+    CASE.wall * 2 -
+    2 * ((rear?.insetY ?? 0) + chamfer);
+  const outerRadius =
+    (rear?.radius ?? model.cornerRadius) + CASE.wall - chamfer;
   if (placement === 'stretched')
     return {
       width: outerWidth,
@@ -520,14 +536,15 @@ export function createCaseGeometry(
     ? refineTaper(model.backSections)
     : undefined;
   const rear = sections?.at(-1);
-  // A constant outer footprint removes the rear overhang while preserving
-  // the scan-derived cavity and the finely sampled plan-view corner arcs.
+  // Vertical outer walls replace the deep rear taper while preserving
+  // the scan-derived cavity and finely sampled plan-view corner arcs.
   const straightExterior = model.id === 'paperwhite-2018';
   const outerRear = straightExterior ? undefined : rear;
+  const chamfer = straightExterior ? PAPERWHITE_10_EDGES.bedChamfer : 0;
   const back = cap(
-    ow - 2 * (outerRear?.insetX ?? 0),
-    oh - 2 * (outerRear?.insetY ?? 0),
-    (outerRear?.radius ?? radius) + CASE.wall,
+    ow - 2 * ((outerRear?.insetX ?? 0) + chamfer),
+    oh - 2 * ((outerRear?.insetY ?? 0) + chamfer),
+    (outerRear?.radius ?? radius) + CASE.wall - chamfer,
     true,
   );
   const backCount = indices.length;
@@ -562,8 +579,48 @@ export function createCaseGeometry(
       indices.push(a[i], a[j], b[i], a[j], b[j], b[i]);
     }
   }
-  const outerTop = boundary(ow, oh, radius + CASE.wall, wallHeight);
-  const innerLip = boundary(iw - 1, ih - 1, radius - 0.5, wallHeight);
+  const rimRadius = straightExterior ? PAPERWHITE_10_EDGES.rimRadius : 0;
+  const outerTop = boundary(
+    ow - 2 * rimRadius,
+    oh - 2 * rimRadius,
+    radius + CASE.wall - rimRadius,
+    wallHeight,
+  );
+  if (straightExterior) {
+    // A 45-degree bed chamfer, then vertical walls. Unlike a bottom fillet,
+    // the footprint never expands faster than the layer rises.
+    let outer = boundary(ow, oh, radius + CASE.wall, () => chamfer);
+    connect(back, outer);
+    const shoulder = boundary(
+      ow,
+      oh,
+      radius + CASE.wall,
+      (i) => wallHeight(i) - rimRadius,
+    );
+    connect(outer, shoulder);
+    outer = shoulder;
+    // Upper rounding retreats inward as Z increases: no exterior overhang.
+    for (let k = 1; k < PAPERWHITE_10_EDGES.rimSegments; k++) {
+      const angle = (k * Math.PI) / (2 * PAPERWHITE_10_EDGES.rimSegments);
+      const inset = rimRadius * (1 - Math.cos(angle));
+      const next = boundary(
+        ow - 2 * inset,
+        oh - 2 * inset,
+        radius + CASE.wall - inset,
+        (i) => wallHeight(i) - rimRadius + rimRadius * Math.sin(angle),
+      );
+      connect(outer, next);
+      outer = next;
+    }
+    connect(outer, outerTop);
+  }
+  const fullInner = outline(iw, ih, radius);
+  const innerLip = outline(iw - 1, ih - 1, radius - 0.5).map(([x, y], i) => {
+    // Access openings do not need a retaining hook; removing it also avoids
+    // compressing its overhang into the low rim's final fraction of a mm.
+    const point = straightExterior && opening[i] ? fullInner[i] : [x, y];
+    return vertex(point[0], point[1], wallHeight(i));
+  });
   const innerUnder = boundary(iw, ih, radius, (i) =>
     Math.max(CASE.base + 0.15, wallHeight(i) - 0.8),
   );
@@ -573,27 +630,29 @@ export function createCaseGeometry(
     // Compress the opening's layers below the low rim, without coincident rings.
     for (const section of [...sections].reverse().slice(1)) {
       const t = (model.depth - section.depth) / model.depth;
-      const nextOuter = boundary(
-        straightExterior ? ow : ow - 2 * section.insetX,
-        straightExterior ? oh : oh - 2 * section.insetY,
-        (straightExterior ? radius : section.radius) + CASE.wall,
-        (i) => (opening[i] ? t * (CASE.base + 0.3) : t * model.depth),
-      );
+      const nextOuter = straightExterior
+        ? outer
+        : boundary(
+            ow - 2 * section.insetX,
+            oh - 2 * section.insetY,
+            section.radius + CASE.wall,
+            (i) => (opening[i] ? t * (CASE.base + 0.3) : t * model.depth),
+          );
       const nextInner = boundary(
         iw - 2 * section.insetX,
         ih - 2 * section.insetY,
         section.radius,
         (i) => CASE.base + t * (opening[i] ? 0.1 : model.depth - 0.2),
       );
-      connect(outer, nextOuter);
+      if (!straightExterior) connect(outer, nextOuter);
       connect(nextInner, inner);
       outer = nextOuter;
       inner = nextInner;
     }
-    connect(outer, outerTop);
+    if (!straightExterior) connect(outer, outerTop);
     connect(innerUnder, inner);
   } else {
-    connect(back, outerTop);
+    if (!straightExterior) connect(back, outerTop);
     connect(innerUnder, floor);
   }
   connect(outerTop, innerLip);

@@ -62,7 +62,10 @@ for (const wall of [rearWall, middleWall, upperWall]) {
     'one cavity boundary and one outer wall, no folds',
   );
   assert.ok(wall[1] - wall[0] >= 1.5, 'side wall retains material thickness');
-  assert.ok(Math.abs(wall[1] - 59.87) < 0.001, 'exterior stays vertical through the rear transition');
+  assert.ok(
+    Math.abs(wall[1] - 59.87) < 0.001,
+    'exterior stays vertical through the rear transition',
+  );
 }
 assert.ok(
   Math.abs(rearWall[0] - 53.67) < 0.1,
@@ -77,6 +80,25 @@ assert.ok(
   'full published width plus clearance near front',
 );
 assert.ok(rearWall[0] < middleWall[0] && middleWall[0] < upperWall[0]);
+// Bed-facing edge grows by 0.4 mm over 0.4 mm of height, then stays vertical.
+assert.ok(Math.abs(rightWallCrossings(0.2).at(-1)! - 59.67) < 0.001);
+assert.ok(Math.abs(rightWallCrossings(0.6).at(-1)! - 59.87) < 0.001);
+// The rounded upper rim retreats inward without reducing the full wall below it.
+assert.ok(rightWallCrossings(11.2).at(-1)! < 59.8);
+// Every downward face above the bed must remain within a 45-degree overhang.
+const printableView = new DataView(generated.stl.buffer);
+for (let offset = 84; offset < generated.stl.length; offset += 50) {
+  const nz = printableView.getFloat32(offset + 8, true);
+  const zs = [0, 1, 2].map((i) =>
+    printableView.getFloat32(offset + 20 + i * 12, true),
+  );
+  if (Math.max(...zs) < 0.001) continue; // Flat back rests on the bed.
+  assert.ok(
+    nz >= -Math.SQRT1_2 - 0.002,
+    `unsupported steep face: normal Z ${nz}, heights ${zs}`,
+  );
+}
+
 assert.equal(generated.filename, 'kasseus-paperwhite-10-plain-mm.stl');
 assert.deepEqual(
   generated.stl,

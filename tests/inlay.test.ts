@@ -74,7 +74,10 @@ parts.forEach((p) => p.delete());
 const reversed = buildInlay(engine, sample, 1);
 assert.ok(reversed.bodyVolume !== design.bodyVolume);
 assert.ok(reversed.pieces > 0);
-const cornerDesign = buildInlay(engine, art((x) => x < 50));
+const cornerDesign = buildInlay(
+  engine,
+  art((x) => x < 50),
+);
 const panel = artworkPanel();
 const halfWidth = panel.width / 2;
 const halfHeight = panel.height / 2;
@@ -93,7 +96,13 @@ for (const layer of cornerDesign.layers)
       'inlay corners follow the rounded case back',
     );
   }
-const stretchedDesign = buildInlay(engine, art((x) => x < 50), 0, undefined, 'stretched');
+const stretchedDesign = buildInlay(
+  engine,
+  art((x) => x < 50),
+  0,
+  undefined,
+  'stretched',
+);
 assert.ok(stretchedDesign.inserts);
 assert.ok(
   stretchedDesign.insertVolume > cornerDesign.insertVolume,
@@ -129,10 +138,18 @@ for (const model of supportedModels) {
   assert.equal(d.pieces, 2);
   const files = unzipSync(exportInlay(d, model, 0));
   assert.deepEqual(Object.keys(files).sort(), [
+    'PRINT-NOTES.txt',
     'READ-ME.txt',
     'case.stl',
     'inserts.stl',
   ]);
+  const printNotes = new TextDecoder().decode(files['PRINT-NOTES.txt']);
+  assert.match(printNotes, /unsupported pocket ceilings/);
+  assert.doesNotMatch(printNotes, /sliced into 56 layers/);
+  assert.equal(
+    printNotes.includes('Paperwhite 10 · soft edges'),
+    model.id === 'paperwhite-2018',
+  );
   for (const filename of ['case.stl', 'inserts.stl']) {
     const bytes = files[filename];
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -184,3 +201,12 @@ denseHit.delete();
 denseBody.delete();
 denseInserts.delete();
 console.log('dense pattern', denseDesign.pieces, 'inserts');
+
+const plainModel = supportedModels.find((m) => m.id === 'paperwhite-2018')!;
+const plainFiles = unzipSync(
+  exportInlay(buildInlay(engine, undefined, 0, plainModel), plainModel, 0),
+);
+const plainNotes = new TextDecoder().decode(plainFiles['PRINT-NOTES.txt']);
+assert.match(plainNotes, /56 layers without supports/);
+assert.match(plainNotes, /bed-temperature warning/);
+assert.doesNotMatch(plainNotes, /unsupported pocket ceilings/);

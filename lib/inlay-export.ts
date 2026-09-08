@@ -7,6 +7,7 @@ import {
 } from './inlay-geometry';
 import { hexColor } from './color-separation';
 import type { SupportedModel } from './models';
+import { printingNotesText } from './printing-notes';
 import { TEXTURE_RELIEF } from './texture-depth';
 function stl(mesh: MeshData, flat = false) {
   const g = meshGeometry(mesh);
@@ -30,12 +31,20 @@ export function exportInlay(
   model: SupportedModel,
   baseColor: number,
 ) {
-  const files: Record<string, Uint8Array> = { 'case.stl': stl(design.body) };
+  const notes = printingNotesText(model, design.kind);
+  const files: Record<string, Uint8Array> = {
+    'case.stl': stl(design.body),
+    'PRINT-NOTES.txt': strToU8(notes),
+  };
   const bodyIndex = Math.min(
     Math.max(0, baseColor),
     Math.max(0, design.colors.length - 1),
   );
   const colors = design.colors.map(hexColor);
+  if (design.kind === 'plain') {
+    files['READ-ME.txt'] = strToU8(notes);
+    return zipSync(files);
+  }
   if (design.kind === 'sculpted') {
     files['READ-ME.txt'] = strToU8(
       `KASSEUS — ${model.name}, ${model.generation}\nSculpted texture case\n\nUnits: millimetres. Import at 100% scale.\nCase filament reference: ${colors[bodyIndex]}\nSTL does not encode color: choose the filament yourself.\n\nSingle-piece case. The back is raised from the photograph's grain, lines and shadows — up to ${TEXTURE_RELIEF} mm outward, so the inner wall is not thinned.\nThere are no pockets or inserts. Print in flexible TPU. Inspect orientation, bridging and supports in your slicer; the textured back may need the case printed with that face up.\nBack thickness: 2.4 mm plus the raised grain. Walls: 1.6 mm.\nThis is an untested physical prototype based on published device dimensions. Print a fit test before a final case.\n\n${design.warnings.join('\n')}\n`,
