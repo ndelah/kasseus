@@ -161,6 +161,7 @@ export function generateCase(input: unknown) {
           backing: CASE.base,
           cornerRadius: profile.cornerRadius,
           backSections: profile.backSections ?? null,
+          exterior: profile.id === 'paperwhite-2018' ? 'vertical-rounded-rectangle' : 'profile-taper',
           retainingLip: 0.5,
           bottomRimHeight: 0.4,
         },

@@ -62,6 +62,7 @@ for (const wall of [rearWall, middleWall, upperWall]) {
     'one cavity boundary and one outer wall, no folds',
   );
   assert.ok(wall[1] - wall[0] >= 1.5, 'side wall retains material thickness');
+  assert.ok(Math.abs(wall[1] - 59.87) < 0.001, 'exterior stays vertical through the rear transition');
 }
 assert.ok(
   Math.abs(rearWall[0] - 53.67) < 0.1,

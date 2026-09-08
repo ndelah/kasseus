@@ -43,7 +43,7 @@ export function artworkPanel(
   model: CaseProfile = supportedModel,
   placement: ArtworkPlacement = 'centered',
 ) {
-  const rear = model.backSections?.at(-1);
+  const rear = model.id === 'paperwhite-2018' ? undefined : model.backSections?.at(-1);
   const outerWidth =
     model.width + CASE.clearance * 2 + CASE.wall * 2 - 2 * (rear?.insetX ?? 0);
   const outerHeight =
@@ -520,10 +520,14 @@ export function createCaseGeometry(
     ? refineTaper(model.backSections)
     : undefined;
   const rear = sections?.at(-1);
+  // A constant outer footprint removes the rear overhang while preserving
+  // the scan-derived cavity and the finely sampled plan-view corner arcs.
+  const straightExterior = model.id === 'paperwhite-2018';
+  const outerRear = straightExterior ? undefined : rear;
   const back = cap(
-    ow - 2 * (rear?.insetX ?? 0),
-    oh - 2 * (rear?.insetY ?? 0),
-    (rear?.radius ?? radius) + CASE.wall,
+    ow - 2 * (outerRear?.insetX ?? 0),
+    oh - 2 * (outerRear?.insetY ?? 0),
+    (outerRear?.radius ?? radius) + CASE.wall,
     true,
   );
   const backCount = indices.length;
@@ -570,9 +574,9 @@ export function createCaseGeometry(
     for (const section of [...sections].reverse().slice(1)) {
       const t = (model.depth - section.depth) / model.depth;
       const nextOuter = boundary(
-        ow - 2 * section.insetX,
-        oh - 2 * section.insetY,
-        section.radius + CASE.wall,
+        straightExterior ? ow : ow - 2 * section.insetX,
+        straightExterior ? oh : oh - 2 * section.insetY,
+        (straightExterior ? radius : section.radius) + CASE.wall,
         (i) => (opening[i] ? t * (CASE.base + 0.3) : t * model.depth),
       );
       const nextInner = boundary(
