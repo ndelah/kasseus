@@ -216,9 +216,7 @@ export default function Home() {
                       <span className="model-option">
                         <span>
                           <strong>{m.name}</strong>
-                          <small>
-                            {m.generation} {!m.enabled && '· Coming later'}
-                          </small>
+                          <small>{m.generation} · Prototype</small>
                         </span>
                       </span>
                     </SelectItem>
@@ -226,7 +224,11 @@ export default function Home() {
                 </SelectContent>
               </Select>
               <p className="model-help">
-                Find your model in Settings → Device Options → Device Info.
+                Find your model in Settings → Device Options → Device Info.{' '}
+                <Link href="/cases/all-cases.zip" prefetch={false} download>
+                  Download all plain cases
+                </Link>
+                .
               </p>
             </section>
             <section

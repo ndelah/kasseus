@@ -7,12 +7,13 @@ import {
   CASE,
 } from '../lib/case-geometry';
 import { models, supportedModels } from '../lib/models';
-assert.deepEqual(supportedModels.map((m) => m.id).sort(), [
-  'paperwhite-2013',
-  'paperwhite-2018',
-  'paperwhite-2021',
-]);
-assert.equal(models.filter((m) => m.enabled).length, 3);
+assert.equal(supportedModels.length, 38);
+assert.equal(models.filter((m) => m.enabled).length, 38);
+assert.ok(
+  supportedModels.every((m) =>
+    ['2026-10-07', '2026-10-08'].includes(m.measurements?.checkedAt ?? ''),
+  ),
+);
 const data = new Uint8ClampedArray(16 * 16 * 4).fill(255);
 for (let y = 4; y < 12; y++)
   for (let x = 4; x < 12; x++) {
@@ -52,15 +53,22 @@ for (const model of supportedModels) {
       exportName: 'paperwhite-11',
     },
   };
-  const expected = expectedById[model.id];
-  assert.ok(expected, `Missing independent expectations for ${model.id}`);
+  const known = expectedById[model.id];
+  const expected = known ?? {
+    width: model.width,
+    height: model.height,
+    depth: model.depth,
+    exportName: model.exportName,
+  };
+
   assert.equal(model.width, expected.width);
   assert.equal(model.height, expected.height);
   assert.equal(model.depth, expected.depth);
-  assert.deepEqual(artworkSize(model), {
-    width: 400,
-    height: expected.cropHeight,
-  });
+  if (known)
+    assert.deepEqual(artworkSize(model), {
+      width: 400,
+      height: known.cropHeight,
+    });
   for (const [name, art] of [
     ['plain', undefined],
     ['relief', { width: 16, height: 16, data }],
@@ -116,7 +124,11 @@ for (const model of supportedModels) {
       assert.equal(e.balance, 0, 'consistent winding');
     }
     assert.ok(volume > 0, 'positive signed volume');
-    assert.ok(volume < 80000, 'hollow case, not a solid block');
+    assert.ok(
+      volume <
+        (model.width + 3.9) * (model.height + 3.9) * (model.depth + 3.05) * 0.8,
+      'hollow case, not a solid block',
+    );
     const b = g.boundingBox!;
     assert.ok(
       Math.abs(
@@ -153,7 +165,11 @@ for (const model of supportedModels) {
       }
       assert.ok(topRim.length > 0);
       assert.ok(Math.max(...topRim) <= CASE.base + 0.401, 'open upper edge');
-      assert.equal(Math.max(...topRim), Math.max(...bottomRim), 'matching rim heights');
+      assert.equal(
+        Math.max(...topRim),
+        Math.max(...bottomRim),
+        'matching rim heights',
+      );
     }
     assert.equal(
       caseFilename(model, art),

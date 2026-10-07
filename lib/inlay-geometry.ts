@@ -1,4 +1,5 @@
 import { supportedModel, type SupportedModel } from './models';
+import { backOpeningOutline } from './case-profile';
 import type {
   ManifoldToplevel,
   CrossSection,
@@ -149,12 +150,23 @@ export function buildInlay(
       if (polygons.length === 0) return null;
       const source = own(new CrossSection(polygons.flat(), 'EvenOdd'));
       const panel = artworkPanel(model, placement);
-      const boundary = own(
+      let boundary = own(
         new CrossSection(
           [roundedRectangle(panel.width, panel.height, panel.radius)],
           'EvenOdd',
         ),
       );
+      // Keep both pockets and loose inserts away from rear control/speaker windows.
+      if (model.backOpenings?.length) {
+        const openings = own(
+          new CrossSection(
+            model.backOpenings.map(backOpeningOutline),
+            'EvenOdd',
+          ),
+        );
+        const safety = own(openings.offset(INLAY.sideGap + 0.1));
+        boundary = own(boundary.subtract(safety));
+      }
       // Crop before simplifying so no insert can spill over the curved back edge.
       const raw = own(source.intersect(boundary));
       const simple = own(raw.simplify(0.12));
@@ -190,6 +202,7 @@ export function buildInlay(
     result.colors = s.colors;
     const bodyIndex = Math.min(Math.max(0, baseColor), s.colors.length - 1);
     if (s.colors.length < 2 || s.contrast < COLOR_SEPARATION) {
+      result.kind = 'plain';
       result.warnings.push(
         'Only one distinct color was found. Use a higher-contrast image to create inserts.',
       );
@@ -200,8 +213,11 @@ export function buildInlay(
       tracePattern(s, (label) => label !== bodyIndex, widthMM, heightMM),
     );
     if (!combined?.region) {
+      result.kind = 'plain';
       result.warnings.push(
-        'No printable shapes remain. Use larger shapes or remove the image for a plain case.',
+        model.backOpenings?.length
+          ? 'Rear access windows leave no space for this artwork. The export contains a plain case; try artwork on the remaining frame.'
+          : 'No printable shapes remain. The export contains a plain case; try larger shapes.',
       );
       if (combined) {
         result.removed = combined.raw.toPolygons();
@@ -264,8 +280,11 @@ export function buildInlay(
     result.pattern = result.layers.flatMap((layer) => layer.pattern);
     result.pieces = result.layers.reduce((n, layer) => n + layer.pieces, 0);
     if (result.pieces === 0) {
+      result.kind = 'plain';
       result.warnings.push(
-        'No printable shapes remain. Use larger shapes or remove the image for a plain case.',
+        model.backOpenings?.length
+          ? 'Rear access windows leave no space for this artwork. The export contains a plain case; try artwork on the remaining frame.'
+          : 'No printable shapes remain. The export contains a plain case; try larger shapes.',
       );
       return result;
     }

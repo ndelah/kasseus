@@ -11,7 +11,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { supportedModels } from '../lib/models';
-import { parseCaseProfile } from '../lib/case-profile';
+import { parseCaseProfile, isAccessOpening } from '../lib/case-profile';
 import { generateCase, validatePlainCaseSTL } from '../lib/case-generator';
 
 const model = supportedModels.find((m) => m.id === 'paperwhite-2018')!;
@@ -23,10 +23,10 @@ assert.equal(
 const generated = generateCase(model);
 // Intersect serialized triangles with a ray through the middle of the right wall.
 // Independent scan-derived checks ensure the hollow cavity actually narrows at the back.
-function rightWallCrossings(z: number) {
-  const view = new DataView(generated.stl.buffer);
+function rightWallCrossings(z: number, bytes = generated.stl) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const xs: number[] = [];
-  for (let offset = 84; offset < generated.stl.length; offset += 50) {
+  for (let offset = 84; offset < bytes.length; offset += 50) {
     const p = [0, 1, 2].map((i) =>
       [0, 1, 2].map((a) => view.getFloat32(offset + 12 + i * 12 + a * 4, true)),
     );
@@ -95,7 +95,7 @@ for (let offset = 84; offset < generated.stl.length; offset += 50) {
   if (Math.max(...zs) < 0.001) continue; // Flat back rests on the bed.
   assert.ok(
     nz >= -Math.SQRT1_2 - 0.002,
-    `unsupported steep face: normal Z ${nz}, heights ${zs}`,
+    `unsupported steep face: normal Z ${nz}, heights ${zs.join(', ')}`,
   );
 }
 
@@ -157,6 +157,85 @@ for (const bad of [
 ])
   assert.throws(() => parseCaseProfile(bad));
 
+// A new ID with a measured rear contour must keep the same standard exterior.
+const renamed = generateCase({
+  ...model,
+  id: 'measured-new-device',
+  exportName: 'measured-new-device',
+});
+for (const z of [0.2, 0.6, 2.5, 5.3, 9])
+  assert.deepEqual(rightWallCrossings(z, renamed.stl), rightWallCrossings(z));
+const tighter = generateCase({
+  ...model,
+  id: 'tight-fit-test',
+  exportName: 'tight-fit-test',
+  clearance: 0.25,
+});
+assert.ok(
+  Math.abs(tighter.report.validation.outerDimensionsMm.width - 119.54) < 0.001,
+);
+assert.equal(tighter.report.shell.clearancePerSide, 0.25);
+const topOnly = generateCase({ ...supportedModels[0], openEdges: ['top'] });
+assert.deepEqual(topOnly.report.validation.openEdges, ['top']);
+assert.equal(topOnly.report.validation.chargingEdgeOpen, false);
+const newKindle = supportedModels.find((m) => m.id === 'kindle-2026')!;
+assert.ok(
+  isAccessOpening(newKindle, newKindle.width / 2, newKindle.height / 2 - 6),
+  'new upper-right power-button area is open',
+);
+assert.ok(
+  isAccessOpening(newKindle, newKindle.width / 2 - 6, newKindle.height / 2),
+  'top edge near new power button is open',
+);
+assert.throws(
+  () => parseCaseProfile({ ...newKindle, accessCornerGuard: 3 }),
+  /corner guard/,
+);
+// Independently project every serialized face onto each access window centre.
+// A through-opening has no horizontal face covering that point at any height.
+function projectedFacesAt(bytes: Uint8Array, x: number, y: number) {
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let faces = 0;
+  for (let offset = 84; offset < bytes.length; offset += 50) {
+    const p = [0, 1, 2].map((i) => [
+      v.getFloat32(offset + 12 + i * 12, true),
+      v.getFloat32(offset + 16 + i * 12, true),
+    ]);
+    const cross = (a: number[], b: number[], c: number[]) =>
+      (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    if (Math.abs(cross(p[0], p[1], p[2])) < 1e-7) continue;
+    const signs = [
+      cross(p[0], p[1], [x, y]),
+      cross(p[1], p[2], [x, y]),
+      cross(p[2], p[0], [x, y]),
+    ];
+    if (signs.every((s) => s >= -1e-7) || signs.every((s) => s <= 1e-7))
+      faces++;
+  }
+  return faces;
+}
+for (const profile of supportedModels) {
+  const result = generateCase(profile);
+  assert.ok(result.report.validation.within45DegreeOverhangLimit);
+  for (const opening of profile.backOpenings ?? [])
+    assert.equal(
+      projectedFacesAt(result.stl, opening.x, opening.y),
+      0,
+      `${profile.id} back access remains clear`,
+    );
+}
+for (const invalid of [
+  { ...model, openEdges: ['diagonal'] },
+  { ...model, openEdges: ['bottom', 'bottom'] },
+  { ...model, clearance: -0.1 },
+  { ...model, retainingLip: 1 },
+  {
+    ...supportedModels[0],
+    backOpenings: [{ x: 100, y: 0, width: 10, height: 10, label: 'outside' }],
+  },
+])
+  assert.throws(() => parseCaseProfile(invalid));
+
 const directory = mkdtempSync(join(tmpdir(), 'kasseus-generator-test-'));
 const cli = resolve('scripts/generate-case.ts');
 const run = (...args: string[]) =>
@@ -174,7 +253,7 @@ try {
       '--model',
       'paperwhite-2018',
       '--model',
-      'oasis-2019',
+      'unsupported-device',
       '--out-dir',
       directory,
     ],
@@ -185,7 +264,9 @@ try {
   assert.deepEqual(readdirSync(directory), [], 'invalid batch writes nothing');
   run('--all', '--out-dir', directory);
   assert.deepEqual(
-    readdirSync(directory).sort(),
+    readdirSync(directory)
+      .filter((name) => !['catalog.json', 'all-cases.zip'].includes(name))
+      .sort(),
     supportedModels.map((m) => m.id).sort(),
   );
   for (const profile of supportedModels) {

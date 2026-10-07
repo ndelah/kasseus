@@ -42,3 +42,6 @@ next-env.d.ts
 # local Worker secrets
 .dev.vars*
 !.dev.vars.example
+
+# Generated at build time from the sourced profile registry
+/public/cases/

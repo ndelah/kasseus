@@ -135,22 +135,30 @@ const { exportInlay } = await import('../lib/inlay-export');
 const { unzipSync } = await import('fflate');
 for (const model of supportedModels) {
   const d = buildInlay(engine, sample, 0, model);
-  assert.equal(d.pieces, 2);
+  if (model.id === 'kindle-2007') {
+    assert.equal(d.kind, 'plain');
+    assert.equal(d.pieces, 0);
+    assert.match(d.warnings.join(' '), /Rear access windows/);
+  } else assert.equal(d.pieces, 2);
   const files = unzipSync(exportInlay(d, model, 0));
-  assert.deepEqual(Object.keys(files).sort(), [
-    'PRINT-NOTES.txt',
-    'READ-ME.txt',
-    'case.stl',
-    'inserts.stl',
-  ]);
-  const printNotes = new TextDecoder().decode(files['PRINT-NOTES.txt']);
-  assert.match(printNotes, /unsupported pocket ceilings/);
-  assert.doesNotMatch(printNotes, /sliced into 56 layers/);
-  assert.equal(
-    printNotes.includes('Paperwhite 10 · soft edges'),
-    model.id === 'paperwhite-2018',
+  assert.deepEqual(
+    Object.keys(files).sort(),
+    [
+      'PRINT-NOTES.txt',
+      'READ-ME.txt',
+      'case.stl',
+      ...(d.kind === 'plain' ? [] : ['inserts.stl']),
+    ].sort(),
   );
-  for (const filename of ['case.stl', 'inserts.stl']) {
+  const printNotes = new TextDecoder().decode(files['PRINT-NOTES.txt']);
+  if (d.kind !== 'plain')
+    assert.match(printNotes, /unsupported pocket ceilings/);
+  assert.doesNotMatch(printNotes, /sliced into 56 layers/);
+  assert.match(printNotes, /Printable shell/);
+  assert.match(printNotes, /45° bed-facing chamfer/);
+  for (const filename of Object.keys(files).filter((name) =>
+    name.endsWith('.stl'),
+  )) {
     const bytes = files[filename];
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     assert.equal(bytes.length, 84 + view.getUint32(80, true) * 50);

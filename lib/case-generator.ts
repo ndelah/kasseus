@@ -1,11 +1,18 @@
 import {
   CASE,
-  PAPERWHITE_10_EDGES,
+  CASE_EDGES,
   createCaseGeometry,
   exportCaseSTL,
   caseFilename,
 } from './case-geometry';
-import { parseCaseProfile, type CaseProfile } from './case-profile';
+import {
+  parseCaseProfile,
+  caseClearance,
+  caseOpenEdges,
+  caseRetainingLip,
+  type CaseProfile,
+  type CaseEdge,
+} from './case-profile';
 
 /** Inspect the serialized STL, welding its repeated vertices by exact float coordinates. */
 export function validatePlainCaseSTL(bytes: Uint8Array, profile: CaseProfile) {
@@ -21,7 +28,10 @@ export function validatePlainCaseSTL(bytes: Uint8Array, profile: CaseProfile) {
   const min = [Infinity, Infinity, Infinity];
   const max = [-Infinity, -Infinity, -Infinity];
   let volume = 0;
-  let lowerRimVertices = 0;
+  const accessCounts = Object.fromEntries(
+    caseOpenEdges(model).map((edge) => [edge, 0]),
+  ) as Partial<Record<CaseEdge, number>>;
+  let maxOverhangDegrees = 0;
   const root = (id: number): number => {
     while (parents[id] !== id) {
       parents[id] = parents[parents[id]];
@@ -43,10 +53,20 @@ export function validatePlainCaseSTL(bytes: Uint8Array, profile: CaseProfile) {
         min[axis] = Math.min(min[axis], point[axis]);
         max[axis] = Math.max(max[axis], point[axis]);
       }
-      if (Math.abs(point[0]) < 10 && point[1] < -model.height / 2) {
-        lowerRimVertices++;
-        if (point[2] > CASE.base + 0.401)
-          throw new Error('Charging edge is blocked.');
+      for (const edge of caseOpenEdges(model)) {
+        const atEdge =
+          edge === 'bottom'
+            ? Math.abs(point[0]) < 10 && point[1] < -model.height / 2
+            : edge === 'top'
+              ? Math.abs(point[0]) < 10 && point[1] > model.height / 2
+              : edge === 'left'
+                ? Math.abs(point[1]) < 10 && point[0] < -model.width / 2
+                : Math.abs(point[1]) < 10 && point[0] > model.width / 2;
+        if (atEdge) {
+          accessCounts[edge]!++;
+          if (point[2] > CASE.base + 0.401)
+            throw new Error(`${edge} access opening is blocked.`);
+        }
       }
       const key = point.join(',');
       let id = vertexIds.get(key);
@@ -76,6 +96,14 @@ export function validatePlainCaseSTL(bytes: Uint8Array, profile: CaseProfile) {
       normal.reduce((sum, n, i) => sum + n * cross[i], 0) <= 0
     )
       throw new Error('STL normal disagrees with its triangle winding.');
+    if (Math.max(...points.map((point) => point[2])) > 0.001 && normal[2] < 0) {
+      const angle = (Math.asin(Math.min(1, -normal[2])) * 180) / Math.PI;
+      maxOverhangDegrees = Math.max(maxOverhangDegrees, angle);
+      if (normal[2] < -Math.SQRT1_2 - 0.002)
+        throw new Error(
+          `Above-bed overhang exceeds 45 degrees (${angle.toFixed(2)} degrees).`,
+        );
+    }
     volume +=
       (a[0] * (b[1] * c[2] - b[2] * c[1]) +
         a[1] * (b[2] * c[0] - b[0] * c[2]) +
@@ -101,8 +129,8 @@ export function validatePlainCaseSTL(bytes: Uint8Array, profile: CaseProfile) {
     throw new Error('Case must be a single connected shell.');
   const dimensions = max.map((v, i) => v - min[i]);
   const expected = [
-    model.width + 2 * (CASE.clearance + CASE.wall),
-    model.height + 2 * (CASE.clearance + CASE.wall),
+    model.width + 2 * (caseClearance(model) + CASE.wall),
+    model.height + 2 * (caseClearance(model) + CASE.wall),
     CASE.base + model.depth + 0.65,
   ];
   if (
@@ -113,7 +141,7 @@ export function validatePlainCaseSTL(bytes: Uint8Array, profile: CaseProfile) {
       'STL dimensions do not match the selected model and shell settings.',
     );
   if (
-    !lowerRimVertices ||
+    Object.values(accessCounts).some((count) => !count) ||
     volume <= 0 ||
     volume >= dimensions[0] * dimensions[1] * dimensions[2] * 0.8
   )
@@ -126,7 +154,10 @@ export function validatePlainCaseSTL(bytes: Uint8Array, profile: CaseProfile) {
     watertight: true,
     consistentWinding: true,
     nondegenerate: true,
-    chargingEdgeOpen: true,
+    chargingEdgeOpen: caseOpenEdges(model).includes('bottom'),
+    openEdges: caseOpenEdges(model),
+    maxOverhangDegrees,
+    within45DegreeOverhangLimit: true,
     volumeMm3: volume,
     boundsMm: { min, max },
     outerDimensionsMm: {
@@ -152,29 +183,37 @@ export function generateCase(input: unknown) {
       filename: caseFilename(profile),
       stl,
       report: {
-        schemaVersion: 1,
-        generator: 'kasseus-case-generator-v2',
+        schemaVersion: 2,
+        generator: 'kasseus-case-generator-v3',
         units: 'mm',
         profile,
         shell: {
-          clearancePerSide: CASE.clearance,
+          clearancePerSide: caseClearance(profile),
           wall: CASE.wall,
           backing: CASE.base,
           cornerRadius: profile.cornerRadius,
           backSections: profile.backSections ?? null,
-          exterior:
-            profile.id === 'paperwhite-2018'
-              ? 'vertical-with-bed-chamfer-and-rounded-rim'
-              : 'profile-taper',
-          edgeTreatment:
-            profile.id === 'paperwhite-2018' ? PAPERWHITE_10_EDGES : null,
-          retainingLip: 0.5,
+          exterior: 'vertical-with-bed-chamfer-and-rounded-rim',
+          edgeTreatment: CASE_EDGES,
+          retainingLip: caseRetainingLip(profile),
+          openEdges: caseOpenEdges(profile),
+          backOpenings: profile.backOpenings ?? [],
           bottomRimHeight: 0.4,
         },
         validation,
         physicalFitValidated: false,
         limitations: [
-          'Corner curvature, back taper, retention and printer tolerance need a physical fit test.',
+          ...(profile.template === 'envelope-tray'
+            ? [
+                'Envelope tray: asymmetric contour is not reproduced; a measured insert or padding may be needed.',
+              ]
+            : []),
+          ...(profile.measurements?.evidence === 'reference'
+            ? [
+                'Nominal reference dimensions need a manufacturer or caliper check.',
+              ]
+            : []),
+          'Corner curvature, rear support, access-window placement, retention and printer tolerance need a physical fit test.',
           'Mesh checks do not certify physical fit or exclude every possible surface intersection.',
         ],
       },

@@ -1,5 +1,10 @@
-import { CASE, PAPERWHITE_10_EDGES } from './case-geometry';
-import type { CaseProfile } from './case-profile';
+import { CASE, CASE_EDGES } from './case-geometry';
+import {
+  caseClearance,
+  caseOpenEdges,
+  caseRetainingLip,
+  type CaseProfile,
+} from './case-profile';
 
 export type PrintKind = 'plain' | 'inlay' | 'sculpted';
 type PrintParagraph = (string | { strong: string })[];
@@ -67,7 +72,7 @@ export function printingNotes(model: CaseProfile, kind: PrintKind) {
     note(
       'Shell and fit',
       [
-        `The base is ${CASE.base} mm thick, with nominal ${CASE.wall} mm walls and ${CASE.clearance} mm clearance per side. Walls can be thicker around the inner rear contour. The lower edge stays open for ${model.port} and power-button access.`,
+        `The base is ${CASE.base} mm thick, with nominal ${CASE.wall} mm walls and ${caseClearance(model)} mm clearance per side. Walls can be thicker around the inner rear contour. Open edges: ${caseOpenEdges(model).join(', ')}. These broad openings preserve controls and ${model.port} access without assuming precise port offsets.`,
       ],
       [
         'This is an untested physical prototype: ',
@@ -76,27 +81,44 @@ export function printingNotes(model: CaseProfile, kind: PrintKind) {
       ],
     ),
   ];
+  notes.splice(
+    2,
+    0,
+    note(
+      'Printable shell',
+      [
+        `Vertical exterior walls, smooth plan-view corners, a ${CASE_EDGES.bedChamfer} mm 45° bed-facing chamfer and a ${CASE_EDGES.rimRadius} mm rounded upper rim. Rear contours affect the cavity only. Open edges have no retaining hooks.`,
+      ],
+      [
+        `Retaining lip: ${caseRetainingLip(model)} mm per side. This lip is intended for flexible TPU; use a physical fit test.`,
+      ],
+    ),
+    note(
+      'Device fit',
+      [
+        `Device envelope: ${model.height} × ${model.width} × ${model.depth} mm (height × width × maximum thickness). ${model.template === 'envelope-tray' ? 'This is an envelope tray: the asymmetric back is not reproduced, there is no snap lip, and a measured insert or padding may be needed for support and retention.' : model.backSections ? 'The scan-informed inner rear contour is preserved.' : `The ${model.cornerRadius} mm corner radius is a conservative estimate; the rear contour has not been measured.`}`,
+      ],
+      [
+        model.measurements?.evidence === 'reference'
+          ? 'Dimensions are reference values; confirm them with calipers before printing a final case.'
+          : 'Published dimensions do not certify physical fit.',
+      ],
+      ...(model.backOpenings?.length
+        ? [
+            [
+              `Rear access windows: ${model.backOpenings.map((o) => o.label).join('; ')}. Their placement is estimated and needs checking against the device.`,
+            ],
+          ]
+        : []),
+    ),
+  );
   if (model.id === 'paperwhite-2018') {
-    notes.splice(
-      2,
-      0,
-      note(
-        'Paperwhite 10 · soft edges',
-        [
-          `Straight exterior walls replace the deep rear taper. Smooth rounded corners meet a ${PAPERWHITE_10_EDGES.bedChamfer} mm, 45° bed-facing chamfer and a ${PAPERWHITE_10_EDGES.rimRadius} mm rounded upper rim. The inner device contour is preserved.`,
-        ],
-        [
-          { strong: 'Both ends remain open' },
-          '; the low access rims have no retaining hooks.',
-        ],
-      ),
-    );
     if (kind === 'plain')
       notes.push(
         note(
-          'Reference slice · a starting point',
+          'Earlier Paperwhite 10 reference slice',
           [
-            'The plain shell sliced into 56 layers without supports in Bambu Studio using a Bambu P1S reference profile, Generic TPU, a 0.4 mm nozzle, 0.20 mm layers, four walls and 20% infill.',
+            'An earlier plain Paperwhite 10 shell sliced into 56 layers without supports in Bambu Studio using a Bambu P1S reference profile, Generic TPU, a 0.4 mm nozzle, 0.20 mm layers, four walls and 20% infill.',
           ],
           ['Estimated use: ', { strong: '57 g and 4 h 9 min' }, '.'],
           [

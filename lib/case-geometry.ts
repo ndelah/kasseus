@@ -1,7 +1,14 @@
 import * as THREE from 'three';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 import { supportedModel } from './models';
-import { parseCaseProfile, type CaseProfile } from './case-profile';
+import {
+  parseCaseProfile,
+  caseClearance,
+  caseRetainingLip,
+  isAccessOpening,
+  backOpeningOutline,
+  type CaseProfile,
+} from './case-profile';
 export const CASE = {
   // Default-model dimensions retained for consumers of the original API.
   width: supportedModel.width,
@@ -13,8 +20,8 @@ export const CASE = {
   radius: 7,
   relief: 0.65,
 };
-// Small edge treatments for the Paperwhite 10 shell, in millimetres.
-export const PAPERWHITE_10_EDGES = {
+// Standard exterior edge treatments for every shell, in millimetres.
+export const CASE_EDGES = {
   bedChamfer: 0.4,
   rimRadius: 0.5,
   rimSegments: 8,
@@ -49,22 +56,12 @@ export function artworkPanel(
   model: CaseProfile = supportedModel,
   placement: ArtworkPlacement = 'centered',
 ) {
-  const chamfer =
-    model.id === 'paperwhite-2018' ? PAPERWHITE_10_EDGES.bedChamfer : 0;
-  const rear =
-    model.id === 'paperwhite-2018' ? undefined : model.backSections?.at(-1);
+  const chamfer = CASE_EDGES.bedChamfer;
   const outerWidth =
-    model.width +
-    CASE.clearance * 2 +
-    CASE.wall * 2 -
-    2 * ((rear?.insetX ?? 0) + chamfer);
+    model.width + caseClearance(model) * 2 + CASE.wall * 2 - 2 * chamfer;
   const outerHeight =
-    model.height +
-    CASE.clearance * 2 +
-    CASE.wall * 2 -
-    2 * ((rear?.insetY ?? 0) + chamfer);
-  const outerRadius =
-    (rear?.radius ?? model.cornerRadius) + CASE.wall - chamfer;
+    model.height + caseClearance(model) * 2 + CASE.wall * 2 - 2 * chamfer;
+  const outerRadius = model.cornerRadius + CASE.wall - chamfer;
   if (placement === 'stretched')
     return {
       width: outerWidth,
@@ -73,8 +70,8 @@ export function artworkPanel(
     };
   // Keep the established artwork dimensions, then round its corners by the
   // same inset from the measured rear outline.
-  const width = model.width + 2 * (CASE.clearance + CASE.wall) - 12;
-  const height = model.height + 2 * (CASE.clearance + CASE.wall) - 12;
+  const width = model.width + 2 * (caseClearance(model) + CASE.wall) - 12;
+  const height = model.height + 2 * (caseClearance(model) + CASE.wall) - 12;
   const inset = Math.max((outerWidth - width) / 2, (outerHeight - height) / 2);
   return {
     width,
@@ -124,7 +121,7 @@ function monotoneSpline(xs: number[], ys: number[]) {
   const secant: number[] = [];
   for (let i = 0; i < n - 1; i++)
     secant.push((ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]));
-  const slope = new Array<number>(n);
+  const slope: number[] = Array.from({ length: n }, () => 0);
   slope[0] = secant[0];
   slope[n - 1] = secant[n - 2];
   for (let i = 1; i < n - 1; i++)
@@ -243,8 +240,8 @@ export function createCaseGeometry(
   const positions: number[] = [],
     uvs: number[] = [],
     indices: number[] = [];
-  const iw = model.width + CASE.clearance * 2,
-    ih = model.height + CASE.clearance * 2;
+  const iw = model.width + caseClearance(model) * 2,
+    ih = model.height + caseClearance(model) * 2;
   const ow = iw + CASE.wall * 2,
     oh = ih + CASE.wall * 2;
   // Every ring uses these counts, so index i always names the same place on the
@@ -462,10 +459,53 @@ export function createCaseGeometry(
    * A sculpted back uses a Cartesian grid so grain is not stair-stepped by
    * polar rings.
    */
+  const holeCaps: { bottom: number[][]; floor: number[][] } = {
+    bottom: [],
+    floor: [],
+  };
   function cap(w: number, h: number, r: number, bottom: boolean) {
     const shape = outline(w, h, r);
     const n = shape.length;
     const z = (x: number, y: number) => (bottom ? -heightAt(x, y) : CASE.base);
+    if (model.backOpenings?.length) {
+      const holes = model.backOpenings.map(backOpeningOutline);
+      const vertices = [...shape, ...holes.flat()].map(([x, y]) =>
+        vertex(x, y, z(x, y)),
+      );
+      const faces = THREE.ShapeUtils.triangulateShape(
+        shape.map(([x, y]) => new THREE.Vector2(x, y)),
+        holes.map((hole) => hole.map(([x, y]) => new THREE.Vector2(x, y))),
+      );
+      for (const face of faces) {
+        const a = vertices[face[0]];
+        let [b, c] = face.slice(1).map((i) => vertices[i]);
+        const cross =
+          (positions[b * 3] - positions[a * 3]) *
+            (positions[c * 3 + 1] - positions[a * 3 + 1]) -
+          (positions[b * 3 + 1] - positions[a * 3 + 1]) *
+            (positions[c * 3] - positions[a * 3]);
+        if (cross > 0 === bottom) [b, c] = [c, b];
+        if (bottom && (art || heightField)) {
+          const x =
+            (positions[a * 3] + positions[b * 3] + positions[c * 3]) / 3;
+          const y =
+            (positions[a * 3 + 1] +
+              positions[b * 3 + 1] +
+              positions[c * 3 + 1]) /
+            3;
+          const centre = vertex(x, y, z(x, y));
+          indices.push(a, b, centre, b, c, centre, c, a, centre);
+        } else indices.push(a, b, c);
+      }
+      let cursor = n;
+      const rings = holes.map((hole) => {
+        const ids = vertices.slice(cursor, cursor + hole.length);
+        cursor += hole.length;
+        return ids;
+      });
+      holeCaps[bottom ? 'bottom' : 'floor'] = rings;
+      return vertices.slice(0, n);
+    }
     if (bottom && sculpted) {
       const outer = shape.map(([x, y]) => vertex(x, y, z(x, y)));
       const pitch = SCULPTED_GRID_PITCH;
@@ -538,13 +578,12 @@ export function createCaseGeometry(
   const rear = sections?.at(-1);
   // Vertical outer walls replace the deep rear taper while preserving
   // the scan-derived cavity and finely sampled plan-view corner arcs.
-  const straightExterior = model.id === 'paperwhite-2018';
-  const outerRear = straightExterior ? undefined : rear;
-  const chamfer = straightExterior ? PAPERWHITE_10_EDGES.bedChamfer : 0;
+
+  const chamfer = CASE_EDGES.bedChamfer;
   const back = cap(
-    ow - 2 * ((outerRear?.insetX ?? 0) + chamfer),
-    oh - 2 * ((outerRear?.insetY ?? 0) + chamfer),
-    (outerRear?.radius ?? radius) + CASE.wall - chamfer,
+    ow - 2 * chamfer,
+    oh - 2 * chamfer,
+    radius + CASE.wall - chamfer,
     true,
   );
   const backCount = indices.length;
@@ -563,13 +602,11 @@ export function createCaseGeometry(
     return outline(w, h, r).map(([x, y], i) => vertex(x, y, z(i)));
   }
   // Open lower edge provides charging and power-button access without assumed port offsets.
-  // Mirror it at the top on Paperwhite 10th generation for a symmetrical shell.
+  // Profile edge openings preserve top/side controls and pen attachment too.
   // Corresponding perimeter samples keep the opening aligned across narrowed
   // outlines, so it is resolved once against the inner outline and reused by index.
-  const opening = outline(iw, ih, radius).map(
-    ([x, y]) =>
-      (y < -ih / 2 + 5 || (model.id === 'paperwhite-2018' && y > ih / 2 - 5)) &&
-      Math.abs(x) < iw / 2 - 10,
+  const opening = outline(iw, ih, radius).map(([x, y]) =>
+    isAccessOpening(model, x, y),
   );
   const wallHeight = (i: number) =>
     opening[i] ? CASE.base + 0.4 : CASE.base + model.depth + 0.65;
@@ -579,14 +616,14 @@ export function createCaseGeometry(
       indices.push(a[i], a[j], b[i], a[j], b[j], b[i]);
     }
   }
-  const rimRadius = straightExterior ? PAPERWHITE_10_EDGES.rimRadius : 0;
+  const rimRadius = CASE_EDGES.rimRadius;
   const outerTop = boundary(
     ow - 2 * rimRadius,
     oh - 2 * rimRadius,
     radius + CASE.wall - rimRadius,
     wallHeight,
   );
-  if (straightExterior) {
+  {
     // A 45-degree bed chamfer, then vertical walls. Unlike a bottom fillet,
     // the footprint never expands faster than the layer rises.
     let outer = boundary(ow, oh, radius + CASE.wall, () => chamfer);
@@ -600,8 +637,8 @@ export function createCaseGeometry(
     connect(outer, shoulder);
     outer = shoulder;
     // Upper rounding retreats inward as Z increases: no exterior overhang.
-    for (let k = 1; k < PAPERWHITE_10_EDGES.rimSegments; k++) {
-      const angle = (k * Math.PI) / (2 * PAPERWHITE_10_EDGES.rimSegments);
+    for (let k = 1; k < CASE_EDGES.rimSegments; k++) {
+      const angle = (k * Math.PI) / (2 * CASE_EDGES.rimSegments);
       const inset = rimRadius * (1 - Math.cos(angle));
       const next = boundary(
         ow - 2 * inset,
@@ -615,46 +652,37 @@ export function createCaseGeometry(
     connect(outer, outerTop);
   }
   const fullInner = outline(iw, ih, radius);
-  const innerLip = outline(iw - 1, ih - 1, radius - 0.5).map(([x, y], i) => {
-    // Access openings do not need a retaining hook; removing it also avoids
-    // compressing its overhang into the low rim's final fraction of a mm.
-    const point = straightExterior && opening[i] ? fullInner[i] : [x, y];
-    return vertex(point[0], point[1], wallHeight(i));
-  });
+  const lip = caseRetainingLip(model);
+  const innerLip = outline(iw - 2 * lip, ih - 2 * lip, radius - lip).map(
+    ([x, y], i) => {
+      // Access openings do not need a retaining hook; removing it also avoids
+      // compressing its overhang into the low rim's final fraction of a mm.
+      const point = opening[i] ? fullInner[i] : [x, y];
+      return vertex(point[0], point[1], wallHeight(i));
+    },
+  );
   const innerUnder = boundary(iw, ih, radius, (i) =>
     Math.max(CASE.base + 0.15, wallHeight(i) - 0.8),
   );
   if (sections) {
-    let outer = back;
     let inner = floor;
-    // Compress the opening's layers below the low rim, without coincident rings.
     for (const section of [...sections].reverse().slice(1)) {
       const t = (model.depth - section.depth) / model.depth;
-      const nextOuter = straightExterior
-        ? outer
-        : boundary(
-            ow - 2 * section.insetX,
-            oh - 2 * section.insetY,
-            section.radius + CASE.wall,
-            (i) => (opening[i] ? t * (CASE.base + 0.3) : t * model.depth),
-          );
       const nextInner = boundary(
         iw - 2 * section.insetX,
         ih - 2 * section.insetY,
         section.radius,
         (i) => CASE.base + t * (opening[i] ? 0.1 : model.depth - 0.2),
       );
-      if (!straightExterior) connect(outer, nextOuter);
       connect(nextInner, inner);
-      outer = nextOuter;
       inner = nextInner;
     }
-    if (!straightExterior) connect(outer, outerTop);
     connect(innerUnder, inner);
   } else {
-    if (!straightExterior) connect(back, outerTop);
     connect(innerUnder, floor);
   }
+  for (let i = 0; i < holeCaps.floor.length; i++)
+    connect(holeCaps.floor[i], holeCaps.bottom[i]);
   connect(outerTop, innerLip);
   connect(innerLip, innerUnder);
   const geometry = new THREE.BufferGeometry();
