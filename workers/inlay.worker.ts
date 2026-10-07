@@ -1,30 +1,20 @@
 import type { SupportedModel } from '../lib/models';
 import Module from 'manifold-3d';
 import wasmUrl from 'manifold-3d/manifold.wasm?url';
-import {
-  buildInlay,
-  buildSculpted,
-  type DesignStyle,
-} from '../lib/inlay-geometry';
-import type { Artwork, ArtworkPlacement } from '../lib/case-geometry';
+import { buildInlay } from '../lib/inlay-geometry';
+import type { Artwork } from '../lib/case-geometry';
 self.onmessage = async (
   event: MessageEvent<{
     art?: Artwork;
     baseColor: number;
     model: SupportedModel;
-    placement: ArtworkPlacement;
-    style?: DesignStyle;
   }>,
 ) => {
   try {
-    const { art, baseColor, model, placement, style } = event.data;
-    if (style === 'sculpted' && art) {
-      self.postMessage({ design: buildSculpted(art, model, placement) });
-      return;
-    }
+    const { art, baseColor, model } = event.data;
     const engine = await Module({ locateFile: () => wasmUrl });
     engine.setup();
-    const design = buildInlay(engine, art, baseColor, model, placement);
+    const design = buildInlay(engine, art, baseColor, model);
     self.postMessage({ design });
   } catch (error) {
     self.postMessage({

@@ -19,7 +19,6 @@ import {
   Loader2,
   Info,
   Leaf,
-  Mountain,
 } from 'lucide-react';
 import {
   Select,
@@ -41,54 +40,29 @@ import {
   supportedModel,
   supportedModels,
 } from '@/lib/models';
-import {
-  readArtwork,
-  SCULPTED_ARTWORK_WIDTH,
-  type Artwork,
-  type ArtworkPlacement,
-} from '@/lib/case-geometry';
+import { readArtwork, type Artwork } from '@/lib/case-geometry';
 import { useInlay } from '@/hooks/use-inlay';
 import { exportInlay } from '@/lib/inlay-export';
 import { printingNotes } from '@/lib/printing-notes';
 import { InlayReview } from '@/components/inlay-review';
-import { SculptedReview } from '@/components/sculpted-review';
-import type { DesignStyle } from '@/lib/inlay-geometry';
 
-/** Studio samples shown until the user uploads their own artwork. */
-const STUDIO_SAMPLES = {
-  inlay: {
-    url: '/yellow_woodrain_waves.jpg',
-    name: 'Yellow woodrain waves · studio artwork',
-  },
-  sculpted: {
-    url: '/texture6.jpg',
-    name: 'Texture 6 · studio artwork',
-  },
+/** Studio sample shown until the user uploads their own artwork. */
+const STUDIO_SAMPLE = {
+  url: '/yellow_woodrain_waves.jpg',
+  name: 'Yellow woodrain waves · studio artwork',
 } as const;
-
-/**
- * Returns true when the current preview is still a built-in sample,
- * so switching Inlaid/Sculpted can swap the matching default image.
- */
-function isStudioSample(url: string) {
-  return (
-    url === STUDIO_SAMPLES.inlay.url || url === STUDIO_SAMPLES.sculpted.url
-  );
-}
 
 export default function Home() {
   const [model, setModel] = useState(supportedModel);
   const [art, setArt] = useState<Artwork>();
   const [baseColor, setBaseColor] = useState(1);
-  const [placement, setPlacement] = useState<ArtworkPlacement>('centered');
-  const [style, setStyle] = useState<DesignStyle>('inlay');
   const {
     design,
     pending,
     error: geometryError,
-  } = useInlay(art, baseColor, model, placement, style);
-  const [imageUrl, setImageUrl] = useState<string>(STUDIO_SAMPLES.inlay.url);
-  const [filename, setFilename] = useState<string>(STUDIO_SAMPLES.inlay.name);
+  } = useInlay(art, baseColor, model);
+  const [imageUrl, setImageUrl] = useState<string>(STUDIO_SAMPLE.url);
+  const [filename, setFilename] = useState<string>(STUDIO_SAMPLE.name);
   const [busy, setBusy] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
@@ -102,12 +76,7 @@ export default function Home() {
   useEffect(() => {
     if (!imageUrl) return;
     const n = ++request.current;
-    readArtwork(
-      imageUrl,
-      model,
-      placement,
-      style === 'sculpted' ? SCULPTED_ARTWORK_WIDTH : 400,
-    )
+    readArtwork(imageUrl, model)
       .then((data) => {
         if (n === request.current) {
           setArt(data);
@@ -131,7 +100,7 @@ export default function Home() {
       // oxlint-disable-next-line react-hooks/exhaustive-deps
       request.current++;
     };
-  }, [imageUrl, model, placement, style]);
+  }, [imageUrl, model]);
   useEffect(() => {
     return () => {
       if (imageUrl.startsWith('blob:')) URL.revokeObjectURL(imageUrl);
@@ -156,28 +125,6 @@ export default function Home() {
     setFilename(file.name);
     setBaseColor(0);
     setView('artwork');
-  }
-  function selectStyle(next: DesignStyle) {
-    if (next === style) return;
-    setStyle(next);
-    setBaseColor(0);
-    setSaved(false);
-    setView('artwork');
-    if (isStudioSample(imageUrl)) {
-      const sample = STUDIO_SAMPLES[next];
-      if (sample.url === imageUrl) return;
-      request.current++;
-      setBusy(true);
-      setArt(undefined);
-      setError('');
-      setImageUrl(sample.url);
-      setFilename(sample.name);
-      return;
-    }
-    if (imageUrl) {
-      setBusy(true);
-      setArt(undefined);
-    }
   }
   function selectModel(id: string | null) {
     const next = supportedModels.find((candidate) => candidate.id === id);
@@ -213,7 +160,7 @@ export default function Home() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `kasseus-${model.exportName}-${design.kind === 'sculpted' ? 'sculpted' : design.inserts ? 'inlay' : 'plain'}.zip`;
+      a.download = `kasseus-${model.exportName}-${design.inserts ? 'inlay' : 'plain'}.zip`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -390,77 +337,10 @@ export default function Home() {
                 </div>
               )}
               <p className="art-info">
-                {style === 'sculpted'
-                  ? 'Lines and shadows become raised grain on a single-piece case. No inserts — the back is shaped from the photograph.'
-                  : 'Your image is separated into flat colors, with recessed pockets and matching glue-in inserts.'}
+                Your image is centered on the back panel and separated into flat
+                colors, with recessed pockets and matching glue-in inserts.
               </p>
-              {imageUrl && (
-                <fieldset className="art-placement">
-                  <legend>Case design</legend>
-                  <div>
-                    <button
-                      type="button"
-                      className={style === 'inlay' ? 'active' : ''}
-                      onClick={() => selectStyle('inlay')}
-                      aria-pressed={style === 'inlay'}
-                    >
-                      Inlaid
-                    </button>
-                    <button
-                      type="button"
-                      className={style === 'sculpted' ? 'active' : ''}
-                      onClick={() => selectStyle('sculpted')}
-                      aria-pressed={style === 'sculpted'}
-                    >
-                      Sculpted
-                    </button>
-                  </div>
-                  <small>
-                    {style === 'sculpted'
-                      ? 'Reads the grain, lines and shadows in your photo and raises them on the case.'
-                      : 'Cuts pockets for each flat color and prints matching glue-in inserts.'}
-                  </small>
-                </fieldset>
-              )}
-              {imageUrl && (
-                <fieldset className="art-placement">
-                  <legend>Artwork placement</legend>
-                  <div>
-                    <button
-                      type="button"
-                      className={placement === 'centered' ? 'active' : ''}
-                      onClick={() => setPlacement('centered')}
-                      aria-pressed={placement === 'centered'}
-                    >
-                      Centered
-                    </button>
-                    <button
-                      type="button"
-                      className={placement === 'stretched' ? 'active' : ''}
-                      onClick={() => setPlacement('stretched')}
-                      aria-pressed={placement === 'stretched'}
-                    >
-                      Stretch to edge
-                    </button>
-                  </div>
-                  <small>
-                    {placement === 'centered'
-                      ? 'Keeps the existing inset panel and crops from the centre.'
-                      : 'Fills the whole rounded exterior, with the design following its edge.'}
-                  </small>
-                </fieldset>
-              )}
-              {art && design && design.kind === 'sculpted' && (
-                <SculptedReview
-                  design={design}
-                  baseColor={baseColor}
-                  onColor={(n) => {
-                    setBaseColor(n);
-                    setSaved(false);
-                  }}
-                />
-              )}
-              {art && design && design.kind !== 'sculpted' && (
+              {art && design && (
                 <InlayReview
                   design={design}
                   model={model}
@@ -495,7 +375,7 @@ export default function Home() {
                   pending ||
                   exporting ||
                   !design ||
-                  Boolean(art && design.kind !== 'sculpted' && !design.inserts)
+                  Boolean(art && !design.inserts)
                 }
               >
                 {exporting ? (
@@ -507,14 +387,11 @@ export default function Home() {
                 <ArrowUpRight size={16} />
               </button>
               <p className="export-caption">
-                <Box size={12} />{' '}
-                {design?.kind === 'sculpted'
-                  ? 'Single-piece case · STL in a ZIP'
-                  : 'Case + inserts · separate STLs in a ZIP'}
+                <Box size={12} /> Case + inserts · separate STLs in a ZIP
               </p>
               <details className="printing-notes">
                 <summary>Printing notes · included in your ZIP</summary>
-                {printingNotes(model, art ? style : 'plain').map(
+                {printingNotes(model, art ? 'inlay' : 'plain').map(
                   ({ title, body }) => (
                     <section key={title}>
                       <h4>{title}</h4>
@@ -549,11 +426,7 @@ export default function Home() {
               view={view}
               reset={reset}
             />
-            <span className="preview-name">
-              {design?.kind === 'sculpted'
-                ? 'The sculpted back case.'
-                : 'The everyday back case.'}
-            </span>
+            <span className="preview-name">The everyday back case.</span>
             <div className="preview-bottom">
               <div className="preview-tools">
                 <Tabs value={view} onValueChange={(v) => setView(String(v))}>
@@ -562,21 +435,12 @@ export default function Home() {
                     aria-label="Preview appearance"
                   >
                     <TabsTrigger value="artwork">
-                      {style === 'sculpted' ? (
-                        <Mountain size={14} />
-                      ) : (
-                        <Layers size={14} />
-                      )}{' '}
-                      {style === 'sculpted' ? 'Form' : 'Assembled'}
+                      <Layers size={14} /> Assembled
                     </TabsTrigger>
-                    {style !== 'sculpted' && (
-                      <>
-                        <TabsTrigger value="relief">
-                          <Box size={14} /> Pockets
-                        </TabsTrigger>
-                        <TabsTrigger value="exploded">Separate</TabsTrigger>
-                      </>
-                    )}
+                    <TabsTrigger value="relief">
+                      <Box size={14} /> Pockets
+                    </TabsTrigger>
+                    <TabsTrigger value="exploded">Separate</TabsTrigger>
                   </TabsList>
                 </Tabs>
                 <button
@@ -692,7 +556,7 @@ export default function Home() {
               </>
             ) : modal === 'print' ? (
               <>
-                {printingNotes(model, art ? style : 'plain').map(
+                {printingNotes(model, art ? 'inlay' : 'plain').map(
                   ({ title, body }) => (
                     <section key={title}>
                       <h3>{title}</h3>
@@ -710,9 +574,8 @@ export default function Home() {
                 </p>
                 <h3>02 · Add something personal</h3>
                 <p>
-                  Upload a picture. It stays on your device. Choose Inlaid for
-                  flat-color pockets and glue-in inserts, or Sculpted to raise
-                  the grain, lines and shadows of a texture into the case back.
+                  Upload a picture. It stays on your device and is centered on
+                  the back panel, with flat-color pockets and glue-in inserts.
                   Remove the artwork for a clean, plain shell.
                 </p>
                 <h3>03 · Make it yours</h3>

@@ -20,7 +20,7 @@ The Cloudflare Vite plugin writes the deploy configuration during the build; Wra
 
 The Kindle Paperwhite 11th generation (2021), 10th generation (2018, Paperwhite 4), and 6th generation (2013, Paperwhite 2) can be selected. Selection updates the dimensions, 3D preview, artwork crop, printing notes and STL filename. The model catalog covers Kindle e-reader body revisions from 2007–2026; storage, connectivity and Kids bundles share their underlying body. Other models remain disabled. Catalog measurements are reference dimensions, not manufacturing drawings.
 
-Upload PNG, JPEG or WebP (10 MB maximum). Images are center-cropped locally and never uploaded to a server. For the default **Inlaid** design, images are quantized locally to as many distinct flat colors as the artwork uses, in a Web Worker using color clustering and contour tracing. Choose **Sculpted** instead to raise the photograph’s grain, lines and shadows into the case back. Choose the case color; inspect assembled, pockets and separate views (inlaid) or the sculpted form. Orange highlights discarded fine detail on inlaid designs. Download a ZIP containing the printable STLs and assembly notes. Removing the image generates a plain case.
+Upload PNG, JPEG or WebP (10 MB maximum). Images are center-cropped locally, centered on the inset back panel and never uploaded to a server. All artwork uses **Inlaid** designs: images are quantized locally to as many distinct flat colors as the artwork uses, in a Web Worker using color clustering and contour tracing. Choose the case color; inspect assembled, pockets and separate views. Orange highlights discarded fine detail. Download a ZIP containing the printable STLs and assembly notes. Removing the image generates a plain case.
 
 The case mesh is a closed shell in millimetres with 0.35 mm clearance per side, 2.4 mm backing, 1.6 mm walls and a 0.5 mm retaining lip. The lower edge is open for charging and the power button. TPU is intended. This is an untested physical prototype: corner radius, retention, fit and printer tolerance need physical validation. Do not claim production-verified fit.
 
@@ -44,16 +44,9 @@ The starter's full `npm run lint` also scans untouched component-library code wi
 
 ## Sample art
 
-The studio opens on a planar sample so Inlaid has distinct flat colors to pocket. Switching to Sculpted loads a relief photograph instead.
+The studio opens on a planar sample with distinct flat colors to pocket.
 
 - `public/yellow_woodrain_waves.jpg` — default Inlaid artwork: a two-tone yellow wood-grain pattern of stacked vertical waves.
-- `public/texture6.jpg` — default Sculpted artwork: a matte carved-grain photograph with concentric ridges and valleys.
-
-## Sculpted texture
-
-Inlaid color pockets need distinct flat shapes. Photographs of grain, leather, fabric or carved surfaces usually have none. Choose **Sculpted** after uploading a texture photo. The browser recovers a height field from shading and from lines: highlights become ridges, shadows become valleys, dark creases cut grooves and bright edges rise. The case back is displaced outward by up to 0.9 mm so the inner wall is not thinned. Export is a single-piece STL with no inserts.
-
-`npm test` also checks recovered bumps and grooves, a watertight sculpted shell, the relief budget, and the sculpted ZIP contents.
 
 ## Color inlays
 

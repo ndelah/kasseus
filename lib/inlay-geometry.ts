@@ -21,9 +21,6 @@ import {
 } from './color-separation';
 import { recoverTextureDepth, TEXTURE_RELIEF } from './texture-depth';
 
-/** How uploaded artwork is turned into a printable case. */
-export type DesignStyle = 'inlay' | 'sculpted';
-
 /** Filament references for a single-piece sculpted case. */
 export const SCULPTED_FILAMENTS: RGB[] = [
   [225, 196, 165],

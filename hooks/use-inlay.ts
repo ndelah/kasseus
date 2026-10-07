@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import type { Artwork, ArtworkPlacement } from '@/lib/case-geometry';
+import type { Artwork } from '@/lib/case-geometry';
 import type { SupportedModel } from '@/lib/models';
-import type { DesignStyle, InlayDesign } from '@/lib/inlay-geometry';
+import type { InlayDesign } from '@/lib/inlay-geometry';
 // Vite supplies the constructor for ?worker imports.
 // oxlint-disable-next-line import/default
 import InlayWorker from '../workers/inlay.worker?worker';
@@ -10,16 +10,11 @@ export function useInlay(
   art: Artwork | undefined,
   baseColor: number,
   model: SupportedModel,
-  placement: ArtworkPlacement,
-  style: DesignStyle = 'inlay',
 ) {
-  const geometryColor = style === 'sculpted' ? 0 : baseColor;
   const [result, setResult] = useState<{
     art: Artwork | undefined;
     baseColor: number;
     model: SupportedModel;
-    placement: ArtworkPlacement;
-    style: DesignStyle;
     design?: InlayDesign;
     error?: string;
   }>();
@@ -29,10 +24,8 @@ export function useInlay(
     const fail = (error: string) =>
       setResult({
         art,
-        baseColor: geometryColor,
+        baseColor,
         model,
-        placement,
-        style,
         error,
       });
     try {
@@ -47,10 +40,8 @@ export function useInlay(
         clearTimeout(timeout);
         setResult({
           art,
-          baseColor: geometryColor,
+          baseColor,
           model,
-          placement,
-          style,
           ...event.data,
         });
       };
@@ -60,10 +51,8 @@ export function useInlay(
       };
       worker.postMessage({
         art,
-        baseColor: geometryColor,
+        baseColor,
         model,
-        placement,
-        style,
       });
     } catch {
       queueMicrotask(() =>
@@ -74,13 +63,11 @@ export function useInlay(
       clearTimeout(timeout);
       worker?.terminate();
     };
-  }, [art, geometryColor, model, placement, style]);
+  }, [art, baseColor, model]);
   const current =
     result?.art === art &&
-    result?.baseColor === geometryColor &&
-    result?.model === model &&
-    result?.placement === placement &&
-    result?.style === style;
+    result?.baseColor === baseColor &&
+    result?.model === model;
   return {
     design: current ? result?.design : undefined,
     error: current ? result?.error : undefined,
