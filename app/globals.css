@@ -97,16 +97,6 @@ svg {
   height: 28px;
   stroke-width: 1.3;
 }
-.quiet-button {
-  background: none;
-  border: 0;
-  padding: 8px 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--text-secondary);
-  font-size: 14px;
-}
 main {
   max-width: 1320px;
   margin: auto;
@@ -217,33 +207,14 @@ h1 em {
   color: var(--text-secondary);
   margin: 12px 0 8px;
 }
-.model-details,
 .printing-notes {
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
-.model-details summary,
 .printing-notes summary {
   cursor: pointer;
   padding: 5px 0;
   font-weight: 600;
-}
-.dimensions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 10px;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-.catalog-link {
-  margin-top: 6px;
-  font-size: 13px;
-}
-.catalog-link svg {
-  width: 14px;
-  height: 14px;
 }
 .model-menu {
   max-height: 320px !important;
@@ -347,17 +318,6 @@ h1 em {
   font-size: 13px;
   color: var(--text-secondary);
   margin: 8px 0;
-}
-.privacy-note {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin: 8px 0 0;
-}
-.privacy-note svg {
-  flex-shrink: 0;
 }
 .art-info {
   display: block;
@@ -486,38 +446,27 @@ h1 em {
 .export-button:disabled {
   opacity: 0.6;
 }
-.export-caption {
-  color: var(--text-secondary);
-  font-size: 13px;
-  margin: 9px 0 0;
-}
-.prototype-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  margin: 12px 0;
-}
-.prototype-note svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-}
 .printing-notes {
-  margin-top: 6px;
+  margin-top: 16px;
   border-top: 1px solid #ded7cf;
   padding-top: 8px;
 }
 .printing-notes section {
-  margin-top: 14px;
+  margin-top: 22px;
 }
 .printing-notes h4 {
-  margin: 0 0 5px;
-  font-size: inherit;
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
 }
 .printing-notes p {
   margin: 0;
+}
+.printing-notes p + p {
+  margin-top: 10px;
+}
+.printing-notes strong {
+  font-weight: 600;
 }
 .printing-notes .guide-caption {
   color: var(--text-secondary);
@@ -797,55 +746,6 @@ footer {
   }
 }
 
-.modal[data-slot] {
-  max-width: 640px;
-  border-radius: 22px;
-  padding: 30px;
-  background: #fffbf7;
-}
-.modal h2 {
-  font-family: Georgia, serif;
-  font-size: 30px;
-  font-weight: 400;
-}
-.modal-body {
-  max-height: 65vh;
-  overflow: auto;
-  line-height: 1.7;
-  font-size: 14px;
-  color: #665b53;
-}
-.modal-body h3 {
-  font-size: 16px;
-  color: #443a33;
-  margin: 19px 0 8px;
-}
-.modal-body p {
-  margin: 8px 0;
-}
-.modal-body a {
-  color: #95664b;
-  text-decoration: underline;
-}
-.catalog-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 12px;
-  padding: 11px 0;
-  border-bottom: 1px solid #e4d8cf;
-  color: #8b817b;
-}
-.catalog-row.active {
-  color: #674831;
-}
-.catalog-row small {
-  display: block;
-  font-size: 13px;
-}
-.catalog-row code {
-  font-size: 13px;
-  align-self: center;
-}
 .spin {
   animation: spin 1s linear infinite;
 }

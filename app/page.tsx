@@ -5,17 +5,14 @@ import { useEffect, useRef, useState } from 'react';
 import {
   BookOpen,
   Box,
-  ArrowUpRight,
   Upload,
   Download,
   RotateCcw,
   Move,
-  ShieldCheck,
   Layers,
   Tablet,
   X,
   Loader2,
-  Info,
   Plus,
   Minus,
 } from 'lucide-react';
@@ -25,20 +22,9 @@ import {
   SelectItem,
   SelectTrigger,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CasePreview from '@/components/case-preview';
-import {
-  models,
-  catalogSource,
-  supportedModel,
-  supportedModels,
-} from '@/lib/models';
+import { models, supportedModel, supportedModels } from '@/lib/models';
 import { readArtwork, type Artwork } from '@/lib/case-geometry';
 import { useInlay } from '@/hooks/use-inlay';
 import { exportInlay } from '@/lib/inlay-export';
@@ -70,7 +56,6 @@ export default function Home() {
   const [view, setView] = useState('artwork');
   const [reset, setReset] = useState(0);
   const [zoom, setZoom] = useState(0);
-  const [modal, setModal] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const request = useRef(0);
   useEffect(() => {
@@ -179,11 +164,6 @@ export default function Home() {
           <BookOpen />
           kasseus
         </Link>
-        <div className="top-actions">
-          <button className="quiet-button" onClick={() => setModal('how')}>
-            How it works <ArrowUpRight size={15} />
-          </button>
-        </div>
       </header>
       <main>
         <div className="intro">
@@ -248,21 +228,6 @@ export default function Home() {
               <p className="model-help">
                 Find your model in Settings → Device Options → Device Info.
               </p>
-              <details className="model-details">
-                <summary>Model details</summary>
-                <div className="dimensions">
-                  <span>
-                    {model.height} × {model.width} × {model.depth} mm
-                  </span>
-                  <span>{model.display}″ display</span>
-                </div>
-                <button
-                  className="quiet-button catalog-link"
-                  onClick={() => setModal('models')}
-                >
-                  Compare Kindle models <ArrowUpRight />
-                </button>
-              </details>
             </section>
             <section
               className="glass control-card artwork-card"
@@ -347,14 +312,6 @@ export default function Home() {
                 {!imageUrl && <small>Choose an image or drag it here</small>}
               </button>
               <p className="file-hint">PNG, JPG or WebP · up to 10 MB</p>
-              <p className="privacy-note">
-                <ShieldCheck size={14} /> Your images stay in your browser.
-              </p>
-              {!imageUrl && (
-                <p className="art-info">
-                  Your case will print without artwork.
-                </p>
-              )}
               {art && design && (
                 <InlayReview
                   design={design}
@@ -482,17 +439,6 @@ export default function Home() {
                 )}{' '}
                 {exporting ? 'Preparing your STL…' : 'Download print kit'}
               </button>
-              <p className="export-caption">
-                {art ? 'Case + glue-in inserts' : 'Plain case'} · STL files in a
-                ZIP
-              </p>
-              <p className="prototype-note">
-                <Info size={15} />
-                <span>
-                  Untested physical prototype. Print a fit test before making
-                  your final case.
-                </span>
-              </p>
               <details className="printing-notes">
                 <summary>Printing guide</summary>
                 <p className="guide-caption">
@@ -500,10 +446,20 @@ export default function Home() {
                   {art && ' Print and glue the inserts separately.'}
                 </p>
                 {printingNotes(model, art ? 'inlay' : 'plain').map(
-                  ({ title, body }) => (
+                  ({ title, paragraphs }) => (
                     <section key={title}>
                       <h4>{title}</h4>
-                      <p>{body}</p>
+                      {paragraphs.map((paragraph, index) => (
+                        <p key={index}>
+                          {paragraph.map((part, partIndex) =>
+                            typeof part === 'string' ? (
+                              part
+                            ) : (
+                              <strong key={partIndex}>{part.strong}</strong>
+                            ),
+                          )}
+                        </p>
+                      ))}
                     </section>
                   ),
                 )}
@@ -522,90 +478,6 @@ export default function Home() {
         <span>Kasseus</span>
         <span>An independent project. Not affiliated with Amazon.</span>
       </footer>
-      <Dialog
-        open={modal !== null}
-        onOpenChange={(open) => {
-          if (!open) setModal(null);
-        }}
-      >
-        <DialogContent className="modal">
-          <DialogTitle>
-            {modal === 'models' ? 'Kindle models' : 'How it works'}
-          </DialogTitle>
-          <DialogDescription>
-            {modal === 'models'
-              ? 'Kindle e-reader dimensions, in height × width × maximum depth.'
-              : 'Design a back case to 3D print and assemble yourself.'}
-          </DialogDescription>
-          <div className="modal-body">
-            {modal === 'models' ? (
-              <>
-                <p>
-                  {supportedModels
-                    .map((m) => `${m.name} ${m.generation}`)
-                    .join('; ')}{' '}
-                  are available. Other models are listed for reference. Kids,
-                  storage and connectivity bundles use their corresponding
-                  device body; Fire tablets are excluded.
-                </p>
-                {models.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`catalog-row ${m.enabled ? 'active' : ''}`}
-                  >
-                    <div>
-                      {m.name}
-                      <small>
-                        {m.generation} ·{' '}
-                        {m.enabled ? 'Available' : 'Not supported yet'}
-                      </small>
-                    </div>
-                    <code>
-                      {m.height} × {m.width} × {m.depth}
-                    </code>
-                  </div>
-                ))}
-                <p>
-                  Sources:{' '}
-                  {supportedModels.map((m) => (
-                    <span key={m.id}>
-                      <a href={m.source} target="_blank" rel="noreferrer">
-                        Amazon {m.shortName} specifications
-                      </a>
-                      {' · '}
-                    </span>
-                  ))}
-                  <a href={catalogSource} target="_blank" rel="noreferrer">
-                    Kindle model catalog
-                  </a>
-                  . Checked September 2026. Rounded catalog dimensions are
-                  reference values, not manufacturing drawings.
-                </p>
-              </>
-            ) : (
-              <>
-                <h3>01 · Choose your Kindle</h3>
-                <p>
-                  Choose your model from the selector. Find your device details
-                  in Settings → Device Options → Device Info.
-                </p>
-                <h3>02 · Add artwork</h3>
-                <p>
-                  Upload a picture. It stays on your device and is centered on
-                  the back panel, with flat-color pockets and glue-in inserts.
-                  Remove the artwork for a clean, plain shell.
-                </p>
-                <h3>03 · Download and print</h3>
-                <p>
-                  Rotate the case in 3D, then download your print kit. Import
-                  the STLs into your slicer in millimetres. See the printing
-                  notes for material and fit guidance.
-                </p>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
