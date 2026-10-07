@@ -1,0 +1,421 @@
+[
+  {
+    "id": "blue-blocks",
+    "name": "Blue Blocks",
+    "artwork": "/designs/blue-blocks.jpg",
+    "featured": true,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/blue-blocks.svg",
+        "colors": [
+          "#fdeddc",
+          "#1305a2"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/blue-blocks.svg",
+        "colors": [
+          "#fdeddc",
+          "#1305a2"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/blue-blocks.svg",
+        "colors": [
+          "#fdeddc",
+          "#1305a2"
+        ]
+      }
+    }
+  },
+  {
+    "id": "geometric-pop",
+    "name": "Geometric Pop",
+    "artwork": "/designs/geometric-pop.jpg",
+    "featured": true,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/geometric-pop.svg",
+        "colors": [
+          "#4387fd",
+          "#fe5d5e",
+          "#fed135"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/geometric-pop.svg",
+        "colors": [
+          "#4387fd",
+          "#fe5d5e",
+          "#fed135"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/geometric-pop.svg",
+        "colors": [
+          "#4387fd",
+          "#fe5d5e",
+          "#fed135"
+        ]
+      }
+    }
+  },
+  {
+    "id": "golden-lines",
+    "name": "Golden Lines",
+    "artwork": "/designs/golden-lines.jpg",
+    "featured": true,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/golden-lines.svg",
+        "colors": [
+          "#f4cb10",
+          "#fadc3f"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/golden-lines.svg",
+        "colors": [
+          "#f4cb10",
+          "#fadc3f"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/golden-lines.svg",
+        "colors": [
+          "#f4cb10",
+          "#fadc3f"
+        ]
+      }
+    }
+  },
+  {
+    "id": "color-islands",
+    "name": "Color Islands",
+    "artwork": "/designs/color-islands.jpg",
+    "featured": true,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/color-islands.svg",
+        "colors": [
+          "#efe8ea",
+          "#01805d",
+          "#fd8f97",
+          "#fe7e10",
+          "#8fd5fb"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/color-islands.svg",
+        "colors": [
+          "#efe8eb",
+          "#01805d",
+          "#fd8f97",
+          "#fe7e0f",
+          "#8fd5fb"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/color-islands.svg",
+        "colors": [
+          "#efe7eb",
+          "#01805d",
+          "#fd8f97",
+          "#fe7e0f",
+          "#8ed5fb"
+        ]
+      }
+    }
+  },
+  {
+    "id": "blue-waves",
+    "name": "Blue Waves",
+    "artwork": "/designs/blue-waves.jpg",
+    "featured": false,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/blue-waves.svg",
+        "colors": [
+          "#ece4d3",
+          "#405ba8"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/blue-waves.svg",
+        "colors": [
+          "#ece4d3",
+          "#405ba8"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/blue-waves.svg",
+        "colors": [
+          "#ece4d3",
+          "#405ba8"
+        ]
+      }
+    }
+  },
+  {
+    "id": "golden-tiles",
+    "name": "Golden Tiles",
+    "artwork": "/designs/golden-tiles.jpg",
+    "featured": false,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/golden-tiles.svg",
+        "colors": [
+          "#f8b620",
+          "#f7f0e1"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/golden-tiles.svg",
+        "colors": [
+          "#f8b520",
+          "#f7efe0"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/golden-tiles.svg",
+        "colors": [
+          "#f8b520",
+          "#f7efe0"
+        ]
+      }
+    }
+  },
+  {
+    "id": "burgundy-blooms",
+    "name": "Burgundy Blooms",
+    "artwork": "/designs/burgundy-blooms.jpg",
+    "featured": false,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/burgundy-blooms.svg",
+        "colors": [
+          "#510f1f",
+          "#f3c2a4",
+          "#b97551"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/burgundy-blooms.svg",
+        "colors": [
+          "#510f1f",
+          "#f3c2a4",
+          "#bb764f"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/burgundy-blooms.svg",
+        "colors": [
+          "#510f1f",
+          "#f3c2a4",
+          "#bb764f"
+        ]
+      }
+    }
+  },
+  {
+    "id": "citrus-garden",
+    "name": "Citrus Garden",
+    "artwork": "/designs/citrus-garden.jpg",
+    "featured": false,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/citrus-garden.svg",
+        "colors": [
+          "#5a3da1",
+          "#3ac59e"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/citrus-garden.svg",
+        "colors": [
+          "#2d3acb",
+          "#12be92",
+          "#f44911",
+          "#f2e8da"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/citrus-garden.svg",
+        "colors": [
+          "#2d3acb",
+          "#12be92",
+          "#f44911",
+          "#f2e8da"
+        ]
+      }
+    }
+  },
+  {
+    "id": "coral-shapes",
+    "name": "Coral Shapes",
+    "artwork": "/designs/coral-shapes.jpg",
+    "featured": false,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/coral-shapes.svg",
+        "colors": [
+          "#f0552c",
+          "#fde7de"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/coral-shapes.svg",
+        "colors": [
+          "#f0552c",
+          "#fde8de"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/coral-shapes.svg",
+        "colors": [
+          "#f0552c",
+          "#fde8de"
+        ]
+      }
+    }
+  },
+  {
+    "id": "ocean-ripples",
+    "name": "Ocean Ripples",
+    "artwork": "/designs/ocean-ripples.jpg",
+    "featured": false,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/ocean-ripples.svg",
+        "colors": [
+          "#1e56af",
+          "#7ab3f1"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/ocean-ripples.svg",
+        "colors": [
+          "#1e56af",
+          "#7ab3f1"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/ocean-ripples.svg",
+        "colors": [
+          "#1e56af",
+          "#7ab3f1"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cobalt-flow",
+    "name": "Cobalt Flow",
+    "artwork": "/designs/cobalt-flow.jpg",
+    "featured": false,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/cobalt-flow.svg",
+        "colors": [
+          "#070fb3",
+          "#f9f2ea"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/cobalt-flow.svg",
+        "colors": [
+          "#060eb3",
+          "#f9f3ea"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/cobalt-flow.svg",
+        "colors": [
+          "#060eb3",
+          "#f9f3ea"
+        ]
+      }
+    }
+  },
+  {
+    "id": "confetti",
+    "name": "Confetti",
+    "artwork": "/designs/confetti.jpg",
+    "featured": false,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/confetti.svg",
+        "colors": [
+          "#040404",
+          "#06895f",
+          "#453635",
+          "#f9b205",
+          "#1faae0",
+          "#9261d9",
+          "#df5a07",
+          "#f58cda",
+          "#fafafa"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/confetti.svg",
+        "colors": [
+          "#030304",
+          "#06895f",
+          "#362f28",
+          "#f9b205",
+          "#1faae0",
+          "#dc5908",
+          "#f38bd8",
+          "#935ff7",
+          "#fafafa",
+          "#795787"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/confetti.svg",
+        "colors": [
+          "#030304",
+          "#06895f",
+          "#362f28",
+          "#f9b205",
+          "#1faae0",
+          "#dd5a08",
+          "#f38bd9",
+          "#935ff7",
+          "#fafafa",
+          "#7a5888"
+        ]
+      }
+    }
+  },
+  {
+    "id": "pink-play",
+    "name": "Pink Play",
+    "artwork": "/designs/pink-play.jpg",
+    "featured": false,
+    "previews": {
+      "paperwhite-2021": {
+        "url": "/designs/paperwhite-2021/pink-play.svg",
+        "colors": [
+          "#f2bbc9",
+          "#100dd9"
+        ]
+      },
+      "paperwhite-2018": {
+        "url": "/designs/paperwhite-2018/pink-play.svg",
+        "colors": [
+          "#f3bbc9",
+          "#100dd9"
+        ]
+      },
+      "paperwhite-2013": {
+        "url": "/designs/paperwhite-2013/pink-play.svg",
+        "colors": [
+          "#f3bbc9",
+          "#100dd9"
+        ]
+      }
+    }
+  }
+]

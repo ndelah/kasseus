@@ -22,7 +22,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import CasePreview from '@/components/case-preview';
 import { models, supportedModel, supportedModels } from '@/lib/models';
 import { readArtwork, type Artwork } from '@/lib/case-geometry';
@@ -30,12 +30,8 @@ import { useInlay } from '@/hooks/use-inlay';
 import { exportInlay } from '@/lib/inlay-export';
 import { printingNotes } from '@/lib/printing-notes';
 import { InlayReview } from '@/components/inlay-review';
-
-/** Studio sample shown until the user uploads their own artwork. */
-const STUDIO_SAMPLE = {
-  url: '/studio-sample.svg',
-  name: 'Sample design',
-} as const;
+import { DesignPicker } from '@/components/design-picker';
+import { defaultDesign, type PremadeDesign } from '@/lib/premade-designs';
 
 export default function Home() {
   const [model, setModel] = useState(supportedModel);
@@ -46,8 +42,12 @@ export default function Home() {
     pending,
     error: geometryError,
   } = useInlay(art, baseColor, model);
-  const [imageUrl, setImageUrl] = useState<string>(STUDIO_SAMPLE.url);
-  const [filename, setFilename] = useState<string>(STUDIO_SAMPLE.name);
+  const [imageUrl, setImageUrl] = useState<string>(defaultDesign.artwork);
+  const [filename, setFilename] = useState<string>(defaultDesign.name);
+  const [artworkSource, setArtworkSource] = useState('design');
+  const [presetId, setPresetId] = useState<string | undefined>(
+    defaultDesign.id,
+  );
   const [busy, setBusy] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
@@ -57,6 +57,7 @@ export default function Home() {
   const [reset, setReset] = useState(0);
   const [zoom, setZoom] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLElement>(null);
   const request = useRef(0);
   useEffect(() => {
     if (!imageUrl) return;
@@ -108,8 +109,34 @@ export default function Home() {
     setArt(undefined);
     setImageUrl(URL.createObjectURL(file));
     setFilename(file.name);
+    setPresetId(undefined);
+    setArtworkSource('upload');
     setBaseColor(0);
     setView('artwork');
+  }
+  function selectDesign(preset: PremadeDesign) {
+    if (imageUrl === preset.artwork) return;
+    request.current++;
+    setBusy(true);
+    setArt(undefined);
+    setImageUrl(preset.artwork);
+    setFilename(preset.name);
+    setPresetId(preset.id);
+    setArtworkSource('design');
+    setBaseColor(0);
+    setView('artwork');
+    setSaved(false);
+    setError('');
+  }
+  function showPreview() {
+    if (window.matchMedia('(max-width: 900px)').matches) {
+      previewRef.current?.scrollIntoView({
+        block: 'start',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+      });
+    }
   }
   function selectModel(id: string | null) {
     const next = supportedModels.find((candidate) => candidate.id === id);
@@ -126,6 +153,7 @@ export default function Home() {
     setArt(undefined);
     setImageUrl('');
     setFilename('');
+    setPresetId(undefined);
     setBusy(false);
     setError('');
     setSaved(false);
@@ -240,80 +268,99 @@ export default function Home() {
                 <h2 id="artwork-heading">Artwork</h2>
                 <span className="small-label">Optional</span>
               </div>
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                hidden
-                onChange={(e) => {
-                  upload(e.target.files?.[0]);
-                  e.target.value = '';
-                }}
-              />
-              {imageUrl && (
-                <div className="art-file">
-                  <Image
-                    src={imageUrl}
-                    alt={
-                      imageUrl === STUDIO_SAMPLE.url
-                        ? 'Sample case artwork'
-                        : 'Selected case artwork'
-                    }
-                    width={40}
-                    height={48}
-                    unoptimized
-                  />
-                  <div>
-                    <p>{filename}</p>
-                    <small>
-                      {imageUrl === STUDIO_SAMPLE.url
-                        ? 'Replace with your own image, or remove for a plain case.'
-                        : 'Centered on the back panel'}
-                    </small>
-                  </div>
-                  <button
-                    onClick={remove}
-                    disabled={exporting}
-                    aria-label="Remove artwork for a plain case"
-                    title="Remove artwork"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              )}
-              <button
-                className={`dropzone ${imageUrl ? 'compact' : ''} ${dragging ? 'dragging' : ''}`}
-                onClick={() => fileInput.current?.click()}
-                disabled={exporting}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragging(true);
-                }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragging(false);
-                  if (!exporting) upload(e.dataTransfer.files[0]);
-                }}
-                aria-label={imageUrl ? 'Replace artwork' : 'Upload image'}
+              <Tabs
+                value={artworkSource}
+                onValueChange={setArtworkSource}
+                className="artwork-source"
               >
-                <span className="upload-icon">
-                  {busy ? (
-                    <Loader2 className="spin" size={20} />
-                  ) : (
-                    <Upload size={20} />
-                  )}
-                </span>
-                <strong>
-                  {busy
-                    ? 'Preparing artwork…'
-                    : imageUrl
-                      ? 'Replace artwork'
-                      : 'Upload image'}
-                </strong>
-                {!imageUrl && <small>Choose an image or drag it here</small>}
-              </button>
-              <p className="file-hint">PNG, JPG or WebP · up to 10 MB</p>
+                <TabsList aria-label="Artwork source">
+                  <TabsTrigger value="design" disabled={exporting}>
+                    Choose a design
+                  </TabsTrigger>
+                  <TabsTrigger value="upload" disabled={exporting}>
+                    Upload your own
+                  </TabsTrigger>
+                </TabsList>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  hidden
+                  onChange={(e) => {
+                    upload(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
+                />
+                <TabsContent value="design">
+                  <DesignPicker
+                    modelId={model.id}
+                    selectedId={presetId}
+                    disabled={exporting}
+                    onSelect={selectDesign}
+                    onPreview={showPreview}
+                  />
+                </TabsContent>
+                {imageUrl && (
+                  <div className="art-file">
+                    <Image
+                      src={imageUrl}
+                      alt="Selected case artwork"
+                      width={40}
+                      height={48}
+                      unoptimized
+                    />
+                    <div>
+                      <p>{filename}</p>
+                      {!presetId && <small>Centered on the back panel</small>}
+                    </div>
+                    <button
+                      onClick={remove}
+                      disabled={exporting}
+                      aria-label="Remove artwork for a plain case"
+                      title="Remove artwork"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+                <TabsContent value="upload">
+                  <button
+                    className={`dropzone ${imageUrl ? 'compact' : ''} ${dragging ? 'dragging' : ''}`}
+                    onClick={() => fileInput.current?.click()}
+                    disabled={exporting}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragging(true);
+                    }}
+                    onDragLeave={() => setDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragging(false);
+                      if (!exporting) upload(e.dataTransfer.files[0]);
+                    }}
+                    aria-label={imageUrl ? 'Replace artwork' : 'Upload image'}
+                  >
+                    <span className="upload-icon">
+                      {busy ? (
+                        <Loader2 className="spin" size={20} />
+                      ) : (
+                        <Upload size={20} />
+                      )}
+                    </span>
+                    <strong>
+                      {busy
+                        ? 'Preparing artwork…'
+                        : imageUrl
+                          ? 'Replace artwork'
+                          : 'Upload image'}
+                    </strong>
+                    {!imageUrl && (
+                      <small>Choose an image or drag it here</small>
+                    )}
+                  </button>
+                  <p className="file-hint">PNG, JPG or WebP · up to 10 MB</p>
+                </TabsContent>
+              </Tabs>
               {art && design && (
                 <InlayReview
                   design={design}
@@ -338,7 +385,11 @@ export default function Home() {
             </section>
           </aside>
           <div className="preview-column">
-            <section className="glass preview" aria-label="Live case preview">
+            <section
+              ref={previewRef}
+              className="glass preview"
+              aria-label="Live case preview"
+            >
               <div className="preview-header">
                 <span className="preview-label">
                   <Box size={16} /> 3D preview
