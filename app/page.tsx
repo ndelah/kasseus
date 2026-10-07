@@ -10,15 +10,14 @@ import {
   Download,
   RotateCcw,
   Move,
-  Check,
   ShieldCheck,
   Layers,
-  Sparkles,
   Tablet,
   X,
   Loader2,
   Info,
-  Leaf,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import {
   Select,
@@ -48,14 +47,14 @@ import { InlayReview } from '@/components/inlay-review';
 
 /** Studio sample shown until the user uploads their own artwork. */
 const STUDIO_SAMPLE = {
-  url: '/yellow_woodrain_waves.jpg',
-  name: 'Yellow woodrain waves · studio artwork',
+  url: '/studio-sample.svg',
+  name: 'Sample design',
 } as const;
 
 export default function Home() {
   const [model, setModel] = useState(supportedModel);
   const [art, setArt] = useState<Artwork>();
-  const [baseColor, setBaseColor] = useState(1);
+  const [baseColor, setBaseColor] = useState(0);
   const {
     design,
     pending,
@@ -70,6 +69,7 @@ export default function Home() {
   const [dragging, setDragging] = useState(false);
   const [view, setView] = useState('artwork');
   const [reset, setReset] = useState(0);
+  const [zoom, setZoom] = useState(0);
   const [modal, setModal] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const request = useRef(0);
@@ -177,41 +177,35 @@ export default function Home() {
       <header className="topbar">
         <Link className="brand" href="/" aria-label="Kasseus home">
           <BookOpen />
-          kasseus<span>STUDIO</span>
+          kasseus
         </Link>
         <div className="top-actions">
           <button className="quiet-button" onClick={() => setModal('how')}>
             How it works <ArrowUpRight size={15} />
           </button>
-          <span className="pill">
-            <i />
-            Made for your next chapter
-          </span>
         </div>
       </header>
       <main>
         <div className="intro">
           <div>
-            <p className="eyebrow">
-              <Sparkles size={14} /> THE KINDLE CASE STUDIO
-            </p>
             <h1>
-              A case of <em>your own.</em>
+              Design your own <em>Kindle case.</em>
             </h1>
             <p className="intro-copy">
-              Your Kindle. Your artwork. Something only you could make.
+              Choose your model, add artwork, and download the case and inserts
+              as STL files for 3D printing.
             </p>
           </div>
-          <span className="intro-note">
-            From a little idea to a tangible thing.
-          </span>
         </div>
         <div className="workspace">
           <aside className="controls" aria-label="Case designer controls">
-            <section className="glass control-card">
+            <section
+              className="glass control-card model-card"
+              aria-labelledby="model-heading"
+            >
               <div className="section-heading">
                 <span className="step">1</span>
-                <h2>Meet your Kindle</h2>
+                <h2 id="model-heading">Kindle model</h2>
               </div>
               <Select
                 value={model.id}
@@ -251,23 +245,32 @@ export default function Home() {
                   ))}
                 </SelectContent>
               </Select>
-              <div className="dimensions">
-                <span>
-                  {model.height} × {model.width} × {model.depth} mm
-                </span>
-                <span>{model.display}″ display</span>
-              </div>
-              <button
-                className="quiet-button catalog-link"
-                onClick={() => setModal('models')}
-              >
-                All Kindle models & dimensions <ArrowUpRight />
-              </button>
+              <p className="model-help">
+                Find your model in Settings → Device Options → Device Info.
+              </p>
+              <details className="model-details">
+                <summary>Model details</summary>
+                <div className="dimensions">
+                  <span>
+                    {model.height} × {model.width} × {model.depth} mm
+                  </span>
+                  <span>{model.display}″ display</span>
+                </div>
+                <button
+                  className="quiet-button catalog-link"
+                  onClick={() => setModal('models')}
+                >
+                  Compare Kindle models <ArrowUpRight />
+                </button>
+              </details>
             </section>
-            <section className="glass control-card">
+            <section
+              className="glass control-card artwork-card"
+              aria-labelledby="artwork-heading"
+            >
               <div className="section-heading">
                 <span className="step">2</span>
-                <h2>Make it personal</h2>
+                <h2 id="artwork-heading">Artwork</h2>
                 <span className="small-label">Optional</span>
               </div>
               <input
@@ -280,9 +283,41 @@ export default function Home() {
                   e.target.value = '';
                 }}
               />
+              {imageUrl && (
+                <div className="art-file">
+                  <Image
+                    src={imageUrl}
+                    alt={
+                      imageUrl === STUDIO_SAMPLE.url
+                        ? 'Sample case artwork'
+                        : 'Selected case artwork'
+                    }
+                    width={40}
+                    height={48}
+                    unoptimized
+                  />
+                  <div>
+                    <p>{filename}</p>
+                    <small>
+                      {imageUrl === STUDIO_SAMPLE.url
+                        ? 'Replace with your own image, or remove for a plain case.'
+                        : 'Centered on the back panel'}
+                    </small>
+                  </div>
+                  <button
+                    onClick={remove}
+                    disabled={exporting}
+                    aria-label="Remove artwork for a plain case"
+                    title="Remove artwork"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
               <button
-                className={`dropzone ${dragging ? 'dragging' : ''}`}
+                className={`dropzone ${imageUrl ? 'compact' : ''} ${dragging ? 'dragging' : ''}`}
                 onClick={() => fileInput.current?.click()}
+                disabled={exporting}
                 onDragOver={(e) => {
                   e.preventDefault();
                   setDragging(true);
@@ -291,9 +326,9 @@ export default function Home() {
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragging(false);
-                  upload(e.dataTransfer.files[0]);
+                  if (!exporting) upload(e.dataTransfer.files[0]);
                 }}
-                aria-label="Upload artwork. PNG, JPG or WebP, up to 10 MB."
+                aria-label={imageUrl ? 'Replace artwork' : 'Upload image'}
               >
                 <span className="upload-icon">
                   {busy ? (
@@ -303,43 +338,23 @@ export default function Home() {
                   )}
                 </span>
                 <strong>
-                  {busy ? 'Preparing your artwork…' : 'Drop in a little you'}
+                  {busy
+                    ? 'Preparing artwork…'
+                    : imageUrl
+                      ? 'Replace artwork'
+                      : 'Upload image'}
                 </strong>
-                <small>Choose an image or drag it here</small>
-                <small>PNG, JPG, WebP · up to 10 MB</small>
+                {!imageUrl && <small>Choose an image or drag it here</small>}
               </button>
-              {imageUrl && (
-                <div className="art-file">
-                  <Image
-                    src={imageUrl}
-                    alt="Selected case artwork"
-                    width={37}
-                    height={43}
-                    unoptimized
-                  />
-                  <div>
-                    <p>{filename}</p>
-                    <small>
-                      <Check
-                        size={11}
-                        style={{ display: 'inline', marginRight: 4 }}
-                      />
-                      {busy
-                        ? 'Preparing artwork…'
-                        : art
-                          ? 'Cropped to your back panel'
-                          : 'Artwork unavailable'}
-                    </small>
-                  </div>
-                  <button onClick={remove} aria-label="Remove artwork">
-                    <X size={16} />
-                  </button>
-                </div>
-              )}
-              <p className="art-info">
-                Your image is centered on the back panel and separated into flat
-                colors, with recessed pockets and matching glue-in inserts.
+              <p className="file-hint">PNG, JPG or WebP · up to 10 MB</p>
+              <p className="privacy-note">
+                <ShieldCheck size={14} /> Your images stay in your browser.
               </p>
+              {!imageUrl && (
+                <p className="art-info">
+                  Your case will print without artwork.
+                </p>
+              )}
               {art && design && (
                 <InlayReview
                   design={design}
@@ -362,10 +377,92 @@ export default function Home() {
                 </p>
               )}
             </section>
-            <section className="glass export-card">
-              <div className="export-title">
-                <span>Ready for the real world</span>
-                <span>STL KIT</span>
+          </aside>
+          <div className="preview-column">
+            <section className="glass preview" aria-label="Live case preview">
+              <div className="preview-header">
+                <span className="preview-label">
+                  <Box size={16} /> 3D preview
+                </span>
+                <div className="camera-tools">
+                  <button
+                    className="icon-button"
+                    onClick={() => setZoom((n) => n - 1)}
+                    disabled={zoom <= -3}
+                    aria-label="Zoom out"
+                    title="Zoom out"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <button
+                    className="icon-button"
+                    onClick={() => setZoom((n) => n + 1)}
+                    disabled={zoom >= 3}
+                    aria-label="Zoom in"
+                    title="Zoom in"
+                  >
+                    <Plus size={16} />
+                  </button>
+                  <button
+                    className="icon-button"
+                    onClick={() => {
+                      setZoom(0);
+                      setReset((n) => n + 1);
+                    }}
+                    aria-label="Reset 3D camera"
+                    title="Reset view"
+                  >
+                    <RotateCcw size={16} />
+                  </button>
+                </div>
+                {(busy || pending) && (
+                  <output className="preview-status">
+                    <Loader2 size={14} className="spin" /> Updating
+                  </output>
+                )}
+              </div>
+              <div className="scene-shadow" />
+              <CasePreview
+                model={model}
+                design={design}
+                baseColor={baseColor}
+                view={view}
+                reset={reset}
+                zoom={zoom}
+              />
+              <div className="preview-bottom">
+                <div className="preview-tools">
+                  <Tabs value={view} onValueChange={(v) => setView(String(v))}>
+                    <TabsList
+                      className="view-switch"
+                      aria-label="Preview appearance"
+                    >
+                      <TabsTrigger value="artwork">
+                        <Layers size={14} /> Assembled
+                      </TabsTrigger>
+                      <TabsTrigger value="relief">
+                        <Box size={14} /> Pockets
+                      </TabsTrigger>
+                      <TabsTrigger value="exploded">Separate</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+                <div className="preview-footer">
+                  <span>
+                    <Move size={13} />
+                    Drag to rotate
+                  </span>
+                  <span>{model.shortName}</span>
+                </div>
+              </div>
+            </section>
+            <section
+              className="glass export-card"
+              aria-labelledby="download-heading"
+            >
+              <div className="section-heading">
+                <span className="step">3</span>
+                <h2 id="download-heading">Download</h2>
               </div>
               <button
                 className="export-button"
@@ -384,13 +481,24 @@ export default function Home() {
                   <Download size={18} />
                 )}{' '}
                 {exporting ? 'Preparing your STL…' : 'Download print kit'}
-                <ArrowUpRight size={16} />
               </button>
               <p className="export-caption">
-                <Box size={12} /> Case + inserts · separate STLs in a ZIP
+                {art ? 'Case + glue-in inserts' : 'Plain case'} · STL files in a
+                ZIP
+              </p>
+              <p className="prototype-note">
+                <Info size={15} />
+                <span>
+                  Untested physical prototype. Print a fit test before making
+                  your final case.
+                </span>
               </p>
               <details className="printing-notes">
-                <summary>Printing notes · included in your ZIP</summary>
+                <summary>Printing guide</summary>
+                <p className="guide-caption">
+                  Included in your ZIP. Use flexible TPU for the case.
+                  {art && ' Print and glue the inserts separately.'}
+                </p>
                 {printingNotes(model, art ? 'inlay' : 'plain').map(
                   ({ title, body }) => (
                     <section key={title}>
@@ -407,85 +515,11 @@ export default function Home() {
                 </output>
               )}
             </section>
-          </aside>
-          <section className="glass preview" aria-label="Live case preview">
-            <div className="preview-header">
-              <span className="preview-label">
-                <Box size={15} /> YOUR CASE, IN 3D
-              </span>
-              <span className="pill">
-                <i />
-                {busy || pending ? 'Updating' : 'Live preview'}
-              </span>
-            </div>
-            <div className="scene-shadow" />
-            <CasePreview
-              model={model}
-              design={design}
-              baseColor={baseColor}
-              view={view}
-              reset={reset}
-            />
-            <span className="preview-name">The everyday back case.</span>
-            <div className="preview-bottom">
-              <div className="preview-tools">
-                <Tabs value={view} onValueChange={(v) => setView(String(v))}>
-                  <TabsList
-                    className="view-switch"
-                    aria-label="Preview appearance"
-                  >
-                    <TabsTrigger value="artwork">
-                      <Layers size={14} /> Assembled
-                    </TabsTrigger>
-                    <TabsTrigger value="relief">
-                      <Box size={14} /> Pockets
-                    </TabsTrigger>
-                    <TabsTrigger value="exploded">Separate</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                <button
-                  className="icon-button"
-                  onClick={() => setReset((n) => n + 1)}
-                  aria-label="Reset 3D camera"
-                  title="Reset view"
-                >
-                  <RotateCcw size={16} />
-                </button>
-              </div>
-              <div className="preview-footer">
-                <span>
-                  <Move size={13} />
-                  Drag to rotate · scroll to zoom
-                </span>
-                <span>
-                  <Check size={13} />
-                  {model.shortName}
-                </span>
-              </div>
-            </div>
-          </section>
-        </div>
-        <div className="underbar">
-          <span>
-            <ShieldCheck size={15} />
-            Your images stay in your browser.
-          </span>
-          <button
-            className="quiet-button"
-            style={{ fontSize: 12, padding: 0 }}
-            onClick={() => setModal('print')}
-          >
-            <Info size={14} /> A few notes before you print{' '}
-            <ArrowUpRight size={13} />
-          </button>
-          <span>
-            <Leaf size={15} />
-            Made by you. Kept for chapters.
-          </span>
+          </div>
         </div>
       </main>
       <footer>
-        <span>kasseus — small objects, personal stories.</span>
+        <span>Kasseus</span>
         <span>An independent project. Not affiliated with Amazon.</span>
       </footer>
       <Dialog
@@ -496,18 +530,12 @@ export default function Home() {
       >
         <DialogContent className="modal">
           <DialogTitle>
-            {modal === 'models'
-              ? 'Find your Kindle.'
-              : modal === 'print'
-                ? 'From screen to something real.'
-                : 'Three small steps.'}
+            {modal === 'models' ? 'Kindle models' : 'How it works'}
           </DialogTitle>
           <DialogDescription>
             {modal === 'models'
               ? 'Kindle e-reader dimensions, in height × width × maximum depth.'
-              : modal === 'print'
-                ? `A simple prototype back shell for ${model.name}, ${model.generation}.`
-                : 'A personal back case, without the complicated settings.'}
+              : 'Design a back case to 3D print and assemble yourself.'}
           </DialogDescription>
           <div className="modal-body">
             {modal === 'models' ? (
@@ -554,17 +582,6 @@ export default function Home() {
                   reference values, not manufacturing drawings.
                 </p>
               </>
-            ) : modal === 'print' ? (
-              <>
-                {printingNotes(model, art ? 'inlay' : 'plain').map(
-                  ({ title, body }) => (
-                    <section key={title}>
-                      <h3>{title}</h3>
-                      <p>{body}</p>
-                    </section>
-                  ),
-                )}
-              </>
             ) : (
               <>
                 <h3>01 · Choose your Kindle</h3>
@@ -572,13 +589,13 @@ export default function Home() {
                   Choose your model from the selector. Find your device details
                   in Settings → Device Options → Device Info.
                 </p>
-                <h3>02 · Add something personal</h3>
+                <h3>02 · Add artwork</h3>
                 <p>
                   Upload a picture. It stays on your device and is centered on
                   the back panel, with flat-color pockets and glue-in inserts.
                   Remove the artwork for a clean, plain shell.
                 </p>
-                <h3>03 · Make it yours</h3>
+                <h3>03 · Download and print</h3>
                 <p>
                   Rotate the case in 3D, then download your print kit. Import
                   the STLs into your slicer in millimetres. See the printing

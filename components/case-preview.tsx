@@ -10,12 +10,14 @@ export default function CasePreview({
   baseColor,
   view,
   reset,
+  zoom,
 }: {
   model: SupportedModel;
   design?: InlayDesign;
   baseColor: number;
   view: string;
   reset: number;
+  zoom: number;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
@@ -74,6 +76,10 @@ export default function CasePreview({
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.enablePan = false;
+    // Keep wheel and vertical touch gestures available for page scrolling.
+    // Zoom is controlled by the visible buttons next to the preview tabs.
+    controls.enableZoom = false;
+    renderer.domElement.style.touchAction = 'pan-y';
     controls.minDistance = 235;
     controls.maxDistance = 650;
     controls.target.set(0, 0, 3);
@@ -176,6 +182,21 @@ export default function CasePreview({
   useEffect(() => {
     const s = sceneRef.current;
     if (!s) return;
+    const distance = THREE.MathUtils.clamp(
+      Math.hypot(-105, 60, -373) * 0.85 ** zoom,
+      s.controls.minDistance,
+      s.controls.maxDistance,
+    );
+    const offset = s.camera.position
+      .clone()
+      .sub(s.controls.target)
+      .setLength(distance);
+    s.camera.position.copy(s.controls.target).add(offset);
+    s.controls.update();
+  }, [zoom]);
+  useEffect(() => {
+    const s = sceneRef.current;
+    if (!s) return;
     s.camera.position.set(-105, 60, -370);
     s.controls.target.set(0, 0, 3);
     s.controls.update();
@@ -188,7 +209,7 @@ export default function CasePreview({
       // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
       role="application"
-      aria-label="Interactive 3D Kindle back case. Drag or use arrow keys to rotate. Scroll to zoom."
+      aria-label="Interactive 3D Kindle back case. Drag or use arrow keys to rotate. Use the zoom buttons to zoom."
     >
       {error && <div className="scene-fallback">{error}</div>}
     </div>
