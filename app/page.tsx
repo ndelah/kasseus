@@ -300,7 +300,7 @@ export default function Home() {
                     onPreview={showPreview}
                   />
                 </TabsContent>
-                {imageUrl && (
+                {imageUrl && !presetId && (
                   <div className="art-file">
                     <Image
                       src={imageUrl}
@@ -364,7 +364,6 @@ export default function Home() {
               {art && design && (
                 <InlayReview
                   design={design}
-                  model={model}
                   baseColor={baseColor}
                   onColor={(n) => {
                     setBaseColor(n);

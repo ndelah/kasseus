@@ -518,15 +518,6 @@ h1 em {
   flex-shrink: 0;
   border: 1px solid #0002;
 }
-.print-review {
-  margin-top: 16px;
-  border-top: 1px solid #ded7cf;
-  padding-top: 14px;
-}
-.print-review h3 {
-  font-size: 14px;
-  margin: 0 0 10px;
-}
 .pattern-review {
   display: flex;
   align-items: center;

@@ -4,5 +4,11 @@
   "main": "vinext/server/fetch-handler",
   "compatibility_date": "2026-09-05",
   "compatibility_flags": ["nodejs_compat"],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  "routes": [
+    {
+      "pattern": "kasseus.delahousse.xyz",
+      "custom_domain": true
+    }
+  ]
 }
